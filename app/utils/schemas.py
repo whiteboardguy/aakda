@@ -29,7 +29,6 @@ class Conversation_Create_Request(BaseModel):
 
 class Conversation_Continue_Request(BaseModel):
     query: str
-    conversation_id: str
     opt_web: bool = True
     model: str = f"{settings.llm_model_id}"
 
