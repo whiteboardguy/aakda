@@ -2,7 +2,7 @@ from . import conv_opts
 
 from fastapi.responses import HTMLResponse
 import asyncio
-from sqlalchemy import select, update
+from sqlalchemy import select, update, not_
 from typing import Annotated
 from fastapi import APIRouter, Request, Form, Depends, HTTPException, status
 from sqlalchemy.orm import Session, attributes
@@ -121,6 +121,9 @@ async def continue_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if conversation.deleted:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
     new_message_index = int(conversation.user_messages[-1]['message_index'])+1
 
 
@@ -164,7 +167,13 @@ async def fetch_conversation(
     Shared ones are handled by the '/conversations/shared/{conv_id}' route.
     """
 
-    if not request.session["session_id"]:
+    try:
+        if not request.session["session_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="You have to be logged in to fetch this conversation.",
+            )
+    except:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="You have to be logged in to fetch this conversation.",
@@ -187,15 +196,18 @@ async def fetch_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if conversation.deleted:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
 
     interleaved = [x for pair in zip(conversation.user_messages, conversation.bot_messages) for x in pair]
 
     return interleaved
 
 
-@router.get("/s/{conv_id}")
+@router.get("/s/{conv_share_id}")
 async def fetch_shared_conversation(
-    conv_id: UUID,
+    conv_share_id: str,
     request: Request,
     db: Session = Depends(get_db),
 ):
@@ -207,7 +219,7 @@ async def fetch_shared_conversation(
     conversation = db.scalars(
         select(models.Conversation)
         .where(
-            (models.Conversation.uid == conv_id) &
+            (models.Conversation.shared_link == conv_share_id) &
             (models.Conversation.shared)
         )
     ).first()
@@ -215,6 +227,47 @@ async def fetch_shared_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if conversation.deleted:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
     interleaved = [x for pair in zip(conversation.user_messages, conversation.bot_messages) for x in pair]
 
     return interleaved
+
+
+@router.get("/list")
+async def list_conversations(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+
+    """
+    List all the conversations of a user.
+    """
+
+
+    if not request.session["session_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You have to be logged in to fetch the conversations.",
+        )
+
+    if not session_is_valid(request.session["uid"], request.session["session_id"], db):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You have to be logged in to fetch the conversations.",
+        )
+
+
+    conversations = db.scalars(
+        select(models.Conversation.title)
+        .where(models.Conversation.user_uid == request.session['uid'])
+        .where(not_(models.Conversation.deleted))
+    ).all()
+
+
+    if not conversations:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+
+    return conversations
