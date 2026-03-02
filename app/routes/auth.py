@@ -72,3 +72,13 @@ async def login_user(
         return status.HTTP_200_OK
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials")
+
+@router.post("/users/logout")
+async def logout_user(request: Request, db: Session = Depends(get_db)):
+    
+    if request.session['uid']:
+        revoke_user_session(request.session['uid'], db)
+    else:
+        pass
+
+    return status.HTTP_200_OK

@@ -29,13 +29,31 @@ async def get_graph(
         on_status     = lambda msg: print(f"[STATUS] {msg}"),
     )
     return JSONResponse({
+
+        # bool
         "is_render":        result["is_render"],
+
+        # str
         "message":          result["message"],
+
+        # str
         "model":            result["model"],
+
+        # int
         "message_retries":  result["message_retries"],
+
+        # List
         "tools_called":     result["tools_called"],
+
+        # List[Dict]
         "sources":          result["sources"],
+
+        # str
         "render_python":    result["render_python"],
+
+        # str
         "render_plot_html": result["render_plot_html"],
-        "render_html_data": f"[{len(result['render_html_data'] or '')} chars]",
+
+        # str
+        "render_html_data": result['render_html_data'],
     })

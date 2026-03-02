@@ -1,4 +1,3 @@
-from colorama import init as colorama_init
 from fastapi import Depends, Request
 from pwdlib import PasswordHash
 from sqlalchemy import select
@@ -7,8 +6,6 @@ from sqlalchemy.orm import Session
 from .print_utils import printStat
 from . import models
 
-
-colorama_init()
 
 pwd_context = PasswordHash.recommended()
 

@@ -27,13 +27,22 @@ def revoke_user_session(user_uid: str, db):
 
     pre_existing_session = db.scalars(select(models.Session).where(models.Session.user_uid == user_uid)).first()
     if pre_existing_session:
-        db.delete(pre_existing_session)
+        try:
+            db.delete(pre_existing_session)
+            db.commit()
+        except:
+            pass
+
+
 
 def session_is_valid(user_uid, input_session_id, db):
 
     target_session = db.scalars(select(models.Session).where(models.Session.user_uid == user_uid)).first()
 
-    if input_session_id is target_session.session_id:
+    if not target_session:
+        return False
+
+    if input_session_id == str(target_session.session_id):
         return True
 
     return False
