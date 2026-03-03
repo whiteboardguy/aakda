@@ -18,7 +18,7 @@ from ..utils.sandbox.sandbox import fetch_graph
 from ..utils.templating import templates
 from ..limiter import limiter
 
-router = APIRouter(prefix="/conversations")
+router = APIRouter(prefix="/conversations", tags=["Conversations"])
 router.include_router(conv_opts.router)
 
 
