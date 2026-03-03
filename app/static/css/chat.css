@@ -526,6 +526,7 @@
   margin: 1rem 0 0;
   border: 1px solid var(--ak-border);
   overflow: hidden;
+  position: relative;
 }
 
 .chart-iframe {
@@ -533,6 +534,149 @@
   width: 100%;
   height: 450px; /* overridden by ak-chart-resize message */
   border: none;
+}
+
+/* Expand button — top-right corner of chart, hidden until hover */
+.chart-expand-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ak-bg-surface);
+  border: 1px solid var(--ak-border);
+  color: var(--ak-text-muted);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity var(--ak-transition), color var(--ak-transition),
+              background var(--ak-transition);
+  z-index: 5;
+}
+.chart-expand-btn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  display: block;
+}
+.chart-container:hover .chart-expand-btn { opacity: 1; }
+.chart-expand-btn:hover {
+  color: var(--ak-accent);
+  background: var(--ak-bg-elevated);
+  border-color: var(--ak-accent);
+}
+
+/* ── Chart modal ── */
+.chart-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.chart-modal.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.chart-modal-inner {
+  position: relative;
+  width: 92vw;
+  height: 88vh;
+  background: var(--ak-bg-surface);
+  border: 1px solid var(--ak-border-mid);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+.chart-modal.open .chart-modal-inner {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Spinner overlay — hides the blank iframe while Plotly initialises */
+.chart-modal-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ak-bg-surface);
+  z-index: 5;
+  opacity: 1;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+.chart-modal-loader.hidden {
+  opacity: 0;
+}
+
+.chart-modal-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ak-border-mid);
+  border-top-color: var(--ak-accent);
+  border-radius: 50%;
+  animation: chart-spin 0.65s linear infinite;
+}
+@keyframes chart-spin {
+  to { transform: rotate(360deg); }
+}
+
+.chart-modal-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  display: block;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.chart-modal-iframe.loaded {
+  opacity: 1;
+}
+
+/* Close button — top-right of modal */
+.chart-modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ak-bg-surface);
+  border: 1px solid var(--ak-border);
+  color: var(--ak-text-muted);
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+  transition: color var(--ak-transition), background var(--ak-transition),
+              border-color var(--ak-transition);
+}
+.chart-modal-close svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  display: block;
+}
+.chart-modal-close:hover {
+  color: var(--ak-accent);
+  background: var(--ak-bg-elevated);
+  border-color: var(--ak-accent);
 }
 
 /* ── Raw data collapsible — plain text toggle ── */

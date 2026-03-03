@@ -19,6 +19,27 @@
 <body>
   {% block content %}{% endblock %}
 
+  <!-- Chart expand modal (singleton, reused for all charts) -->
+  <div id="chart-modal" class="chart-modal" role="dialog" aria-modal="true" aria-label="Expanded chart" onclick="handleChartModalBackdropClick(event)">
+    <div class="chart-modal-inner">
+      <button class="chart-modal-close" onclick="closeChartModal()" aria-label="Close expanded chart" title="Close (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 6L6 18" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          <path d="M6 6L18 18" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <!-- Loading spinner — visible until iframe content is ready -->
+      <div id="chart-modal-loader" class="chart-modal-loader">
+        <div class="chart-modal-spinner"></div>
+      </div>
+      <iframe id="chart-modal-iframe"
+              sandbox="allow-scripts"
+              class="chart-modal-iframe"
+              title="Expanded chart">
+      </iframe>
+    </div>
+  </div>
+
   <!-- HTMX (loaded synchronously so attributes are processed immediately) -->
   <script src="/static/js/htmx.min.js"></script>
   <!-- HTMX SSE extension -->

@@ -307,3 +307,109 @@ window.addEventListener('message', function(e) {
     } catch (_) {}
   }
 });
+
+/* ============================================================
+   CHART MODAL
+   ============================================================ */
+
+window.expandChart = function(btn) {
+  const container = btn.closest('.chart-container');
+  if (!container) return;
+  const inlineIframe = container.querySelector('.chart-iframe');
+  if (!inlineIframe) return;
+
+  const modal      = document.getElementById('chart-modal');
+  const modalFrame = document.getElementById('chart-modal-iframe');
+  const loader     = document.getElementById('chart-modal-loader');
+  if (!modal || !modalFrame) return;
+
+  /* If already open, clear previous content first */
+  if (modal.classList.contains('open')) {
+    modalFrame.srcdoc = '';
+    modalFrame.classList.remove('loaded');
+  }
+
+  /* Reset loader to visible */
+  if (loader) loader.classList.remove('hidden');
+  modalFrame.classList.remove('loaded');
+
+  /* Build srcdoc: override Plotly's fixed height, then fire resize so it
+     re-lays out to fill 100vh. Two timeouts cover sync and async init. */
+  const src = inlineIframe.srcdoc || '';
+  const fillStyle = '<style>' +
+    'html,body{margin:0;padding:0;height:100%!important;overflow:hidden!important}' +
+    '.plotly-graph-div{height:100vh!important;width:100%!important}' +
+    '</style>' +
+    '<script>window.addEventListener("load",function(){' +
+      'window.dispatchEvent(new Event("resize"));' +
+      'setTimeout(function(){window.dispatchEvent(new Event("resize"));},200);' +
+    '});<\/script>';
+  const injected = src.includes('</head>')
+    ? src.replace('</head>', fillStyle + '</head>')
+    : fillStyle + src;
+  modalFrame.srcdoc = injected;
+
+  /* Open backdrop + panel immediately */
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  history.pushState({ chartModal: true }, '');
+
+  /* Once iframe has loaded and Plotly has re-rendered, fade chart in */
+  modalFrame.addEventListener('load', function onLoad() {
+    modalFrame.removeEventListener('load', onLoad);
+    /* Wait for the 200 ms resize + one paint cycle */
+    setTimeout(function() {
+      if (loader) loader.classList.add('hidden');
+      modalFrame.classList.add('loaded');
+    }, 260);
+  }, { once: true });
+};
+
+window.closeChartModal = function() {
+  const modal      = document.getElementById('chart-modal');
+  const modalFrame = document.getElementById('chart-modal-iframe');
+  if (!modal || !modal.classList.contains('open')) return;
+
+  /* Animate out */
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+
+  /* Clear srcdoc only after the CSS transition finishes (300 ms panel + small buffer)
+     so there's no flash of blank content during the close animation. */
+  setTimeout(function() {
+    if (modalFrame) {
+      modalFrame.srcdoc = '';
+      modalFrame.classList.remove('loaded');
+    }
+    const loader = document.getElementById('chart-modal-loader');
+    if (loader) loader.classList.remove('hidden');
+  }, 320);
+};
+
+/* Backdrop click — called by onclick on the overlay element in base.html */
+window.handleChartModalBackdropClick = function(e) {
+  /* Only close when the click target is the backdrop itself, not the inner panel */
+  const modal = document.getElementById('chart-modal');
+  if (modal && e.target === modal) {
+    history.back();
+  }
+};
+
+/* Escape key — close modal (takes priority over the existing blur-on-Escape handler) */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('chart-modal');
+    if (modal && modal.classList.contains('open')) {
+      e.stopImmediatePropagation();
+      history.back();
+    }
+  }
+}, true /* capture phase — runs before the existing keydown listener */);
+
+/* Browser back button — close modal instead of navigating away */
+window.addEventListener('popstate', function(e) {
+  const modal = document.getElementById('chart-modal');
+  if (modal && modal.classList.contains('open')) {
+    closeChartModal();
+  }
+});
