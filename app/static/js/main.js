@@ -19,7 +19,9 @@ function renderMarkdown() {
   document.querySelectorAll('[data-markdown]:not([data-rendered])').forEach(el => {
     const raw = el.textContent || el.innerText || '';
     if (!raw.trim()) return;
-    el.innerHTML = marked.parse(raw);
+    el.innerHTML = (typeof DOMPurify !== 'undefined')
+      ? DOMPurify.sanitize(marked.parse(raw))
+      : marked.parse(raw);
     el.setAttribute('data-rendered', 'true');
   });
 
@@ -319,36 +321,15 @@ window.handleDeleteAllConfirm = function(btn) {
   const cancelBtn = document.getElementById('delete-all-cancel');
   if (cancelBtn) cancelBtn.disabled = true;
 
-  const convIds = Array.from(
-    document.querySelectorAll('#sidebar-history-list [id^="sidebar-conv-"]')
-  ).map(el => el.id.replace('sidebar-conv-', ''));
-
-  if (convIds.length === 0) {
+  fetch('/conversations/delete-all', {
+    method: 'POST',
+    credentials: 'same-origin',
+  }).finally(() => {
+    const list = document.getElementById('sidebar-history-list');
+    if (list) list.innerHTML = '';
+    window.resetFormToNew();
     closeDeleteAllModal();
-    return;
-  }
-
-  let i = 0;
-  function deleteNext() {
-    if (i >= convIds.length) {
-      /* All done — clear sidebar, reset form, close modal */
-      const list = document.getElementById('sidebar-history-list');
-      if (list) list.innerHTML = '';
-      window.resetFormToNew();
-      closeDeleteAllModal();
-      return;
-    }
-    const id = convIds[i++];
-    fetch(`/conversations/opts/delete/${id}`, {
-      method: 'POST',
-      credentials: 'same-origin',
-    }).finally(() => {
-      const el = document.getElementById(`sidebar-conv-${id}`);
-      if (el) el.remove();
-      setTimeout(deleteNext, 100);
-    });
-  }
-  deleteNext();
+  });
 };
 
 /* Close on backdrop click */
@@ -430,6 +411,7 @@ window.toggleAuthPassword = function(inputId, btn) {
   btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 };
 window.addEventListener('message', function(e) {
+  if (e.origin !== window.location.origin) return;
   if (!e.data || e.data.type !== 'ak-chart-resize') return;
   const iframes = document.querySelectorAll('.chart-iframe');
   for (const iframe of iframes) {

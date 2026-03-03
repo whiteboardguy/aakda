@@ -1066,8 +1066,6 @@ summary.raw-data-toggle::-webkit-details-marker {
   border: 1px solid transparent;
   cursor: pointer;
   min-width: 80px;
-  transition: background var(--ak-transition), color var(--ak-transition),
-              border-color var(--ak-transition);
 }
 .ak-confirm-btn:disabled {
   opacity: 0.45;

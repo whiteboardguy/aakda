@@ -33,5 +33,4 @@ class Base(DeclarativeBase):
 
 def get_db():
     with Session(engine) as db_session:
-        printStat("o", "Yielding database session.")
         yield db_session

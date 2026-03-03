@@ -12,13 +12,38 @@ from sqlalchemy.orm import Session, attributes
 from . import conv_opts
 from ..utils import status as task_status, models, schemas
 from ..utils.database import engine, get_db
+from ..utils.deps import require_auth
 from ..utils.print_utils import printStat
 from ..utils.sandbox.sandbox import fetch_graph
-from ..utils.sessions import session_is_valid
 from ..utils.templating import templates
 
 router = APIRouter(prefix="/conversations")
 router.include_router(conv_opts.router)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_message_pairs(conversation) -> list:
+    """Build a sorted list of {user_msg, bot_msg} dicts from a Conversation."""
+    bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
+    pairs = []
+    for user_msg in sorted(
+        conversation.user_messages, key=lambda m: m["message_index"]
+    ):
+        idx = user_msg["message_index"]
+        raw_bot = bot_by_index.get(idx)
+        if raw_bot is None:
+            continue
+        bot_msg = dict(raw_bot)
+        if isinstance(bot_msg.get("sources"), str):
+            bot_msg["sources"] = json.loads(bot_msg["sources"])
+        if isinstance(bot_msg.get("tools_called"), str):
+            bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
+        pairs.append({"user_msg": user_msg, "bot_msg": bot_msg})
+    return pairs
 
 
 # ---------------------------------------------------------------------------
@@ -81,9 +106,11 @@ async def _run_job(
         task_status.set_error(conv_uid, message_index, str(exc))
 
     finally:
-        # Only clear the status entry — errors are cleared by the poll endpoint
-        # after it has delivered the error_bubble to the client.
-        task_status._status.pop(f"{conv_uid}:{message_index}", None)
+        # Clear the status entry; also schedule error cleanup in 10 minutes
+        # in case the client never polls (navigated away, network failure, etc.)
+        key = f"{conv_uid}:{message_index}"
+        task_status._status.pop(key, None)
+        loop.call_later(600, task_status._errors.pop, key, None)
 
 
 # ---------------------------------------------------------------------------
@@ -93,16 +120,10 @@ async def _run_job(
 async def create_conversation(
     request: Request,
     user_input: Annotated[schemas.Conversation_Create_Request, Form()],
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Create a new conversation, spawn background AI job, return polling loader."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     new_user_message = schemas.U_msg(
         message=user_input.query, message_index=1
@@ -158,16 +179,10 @@ async def continue_conversation(
     conv_id: UUID,
     request: Request,
     user_input: Annotated[schemas.Conversation_Continue_Request, Form()],
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Continue an existing conversation; spawn background AI job, return polling loader."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     conversation = db.scalars(
         select(models.Conversation).where(
@@ -177,6 +192,9 @@ async def continue_conversation(
 
     if not conversation or conversation.deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if not conversation.user_messages:
+        raise HTTPException(status_code=400, detail="Conversation has no messages")
 
     new_message_index = int(conversation.user_messages[-1]["message_index"]) + 1
 
@@ -229,16 +247,10 @@ async def poll_message(
     conv_id: UUID,
     message_index: int,
     request: Request,
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Poll endpoint: returns loading_state (not done), message_group (done), or error_bubble."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     conv_uid = str(conv_id)
 
@@ -266,37 +278,39 @@ async def poll_message(
         )
     ).first()
 
-    if conversation:
-        bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
-        raw_bot = bot_by_index.get(message_index)
-        if raw_bot is not None:
-            # Done — render the completed message group.
-            bot_msg = dict(raw_bot)
-            if isinstance(bot_msg.get("sources"), str):
-                bot_msg["sources"] = json.loads(bot_msg["sources"])
-            if isinstance(bot_msg.get("tools_called"), str):
-                bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
 
-            user_by_index = {
-                msg["message_index"]: msg for msg in conversation.user_messages
-            }
-            user_msg = user_by_index.get(
-                message_index, {"message": "", "message_index": message_index}
-            )
+    bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
+    raw_bot = bot_by_index.get(message_index)
+    if raw_bot is not None:
+        # Done — render the completed message group.
+        bot_msg = dict(raw_bot)
+        if isinstance(bot_msg.get("sources"), str):
+            bot_msg["sources"] = json.loads(bot_msg["sources"])
+        if isinstance(bot_msg.get("tools_called"), str):
+            bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
 
-            return templates.TemplateResponse(
-                "partials/message_group.html",
-                {
-                    "request": request,
-                    "user_msg": user_msg,
-                    "bot_msg": bot_msg,
-                    "conv_id": conv_uid,
-                },
-                headers={
-                    "HX-Retarget": f"#poll-{conv_uid}-{message_index}",
-                    "HX-Reswap": "outerHTML",
-                },
-            )
+        user_by_index = {
+            msg["message_index"]: msg for msg in conversation.user_messages
+        }
+        user_msg = user_by_index.get(
+            message_index, {"message": "", "message_index": message_index}
+        )
+
+        return templates.TemplateResponse(
+            "partials/message_group.html",
+            {
+                "request": request,
+                "user_msg": user_msg,
+                "bot_msg": bot_msg,
+                "conv_id": conv_uid,
+            },
+            headers={
+                "HX-Retarget": f"#poll-{conv_uid}-{message_index}",
+                "HX-Reswap": "outerHTML",
+            },
+        )
 
     # Still in progress — return just the updated status text.
     current_status = task_status.get_status(conv_uid, message_index)
@@ -309,10 +323,9 @@ async def poll_message(
 @router.get("/new-form")
 async def new_conversation_form(request: Request):
     """Return an empty chat-area placeholder; JS resets the form action to /conversations/new."""
-    return HTMLResponse(
-        '<div id="chat-area-placeholder" class="flex items-center justify-center h-full">'
-        '<p class="text-base-content/40 text-sm select-none">Ask anything to start a new conversation.</p>'
-        "</div>"
+    return templates.TemplateResponse(
+        "partials/new_conv_placeholder.html",
+        {"request": request},
     )
 
 
@@ -323,20 +336,10 @@ async def new_conversation_form(request: Request):
 async def fetch_conversation(
     conv_id: UUID,
     request: Request,
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Fetch a conversation thread and return it as an HTML partial."""
-
-    try:
-        session_id = request.session.get("session_id")
-        uid = request.session.get("uid")
-        if not session_id or not uid:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     conversation = db.scalars(
         select(models.Conversation).where(
@@ -347,28 +350,11 @@ async def fetch_conversation(
     if not conversation or conversation.deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
-
-    message_pairs = []
-    for user_msg in sorted(
-        conversation.user_messages, key=lambda m: m["message_index"]
-    ):
-        idx = user_msg["message_index"]
-        raw_bot = bot_by_index.get(idx)
-        if raw_bot is None:
-            continue
-        bot_msg = dict(raw_bot)
-        if isinstance(bot_msg.get("sources"), str):
-            bot_msg["sources"] = json.loads(bot_msg["sources"])
-        if isinstance(bot_msg.get("tools_called"), str):
-            bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
-        message_pairs.append({"user_msg": user_msg, "bot_msg": bot_msg})
-
     return templates.TemplateResponse(
         "partials/conversation_thread.html",
         {
             "request": request,
-            "message_pairs": message_pairs,
+            "message_pairs": _build_message_pairs(conversation),
             "conv_id": str(conv_id),
         },
     )
@@ -389,34 +375,18 @@ async def fetch_shared_conversation(
         select(models.Conversation).where(
             (models.Conversation.shared_link == conv_share_id)
             & (models.Conversation.shared)
+            & not_(models.Conversation.deleted)
         )
     ).first()
 
-    if not conversation or conversation.deleted:
+    if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-
-    bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
-
-    message_pairs = []
-    for user_msg in sorted(
-        conversation.user_messages, key=lambda m: m["message_index"]
-    ):
-        idx = user_msg["message_index"]
-        raw_bot = bot_by_index.get(idx)
-        if raw_bot is None:
-            continue
-        bot_msg = dict(raw_bot)
-        if isinstance(bot_msg.get("sources"), str):
-            bot_msg["sources"] = json.loads(bot_msg["sources"])
-        if isinstance(bot_msg.get("tools_called"), str):
-            bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
-        message_pairs.append({"user_msg": user_msg, "bot_msg": bot_msg})
 
     return templates.TemplateResponse(
         "shared.html",
         {
             "request": request,
-            "message_pairs": message_pairs,
+            "message_pairs": _build_message_pairs(conversation),
             "conv_id": conv_share_id,
             "title": conversation.title or "Shared Conversation",
         },
@@ -429,16 +399,10 @@ async def fetch_shared_conversation(
 @router.get("/list")
 async def list_conversations(
     request: Request,
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Return the sidebar conversation list as an HTML partial."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     user_conversations = db.scalars(
         select(models.Conversation)
@@ -466,3 +430,27 @@ async def list_conversations(
         "partials/sidebar_list.html",
         {"request": request, "conversations": convs},
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /conversations/delete-all — bulk soft-delete all user conversations
+# ---------------------------------------------------------------------------
+@router.post("/delete-all")
+async def delete_all_conversations(
+    uid: str = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    """Soft-delete every non-deleted conversation belonging to the authenticated user."""
+    conversations = db.scalars(
+        select(models.Conversation).where(
+            (models.Conversation.user_uid == uid) & not_(models.Conversation.deleted)
+        )
+    ).all()
+
+    now = datetime.now(timezone.utc)
+    for conv in conversations:
+        conv.deleted = True
+        conv.deleted_at = now
+
+    db.commit()
+    return HTMLResponse("")

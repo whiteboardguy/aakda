@@ -23,7 +23,7 @@ class User_Login_Request(BaseModel):
     password: str
 
 
-class Conversation_Create_Request(BaseModel):
+class Conversation_Request(BaseModel):
     query: str
     opt_web: bool = True
     model: str = f"{settings.llm_model_id}"
@@ -34,15 +34,9 @@ class Conversation_Create_Request(BaseModel):
         return v.strip() or settings.llm_model_id
 
 
-class Conversation_Continue_Request(BaseModel):
-    query: str
-    opt_web: bool = True
-    model: str = f"{settings.llm_model_id}"
-
-    @field_validator("model", mode="before")
-    @classmethod
-    def _default_model(cls, v: str) -> str:
-        return v.strip() or settings.llm_model_id
+# Aliases kept so that existing route annotations stay readable.
+Conversation_Create_Request = Conversation_Request
+Conversation_Continue_Request = Conversation_Request
 
 
 class U_msg(BaseModel):

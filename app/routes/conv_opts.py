@@ -7,11 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from ..cfg import settings
 from ..utils import models
 from ..utils.database import get_db
+from ..utils.deps import require_auth
 from ..utils.print_utils import printStat
-from ..utils.sessions import session_is_valid
 from ..utils.templating import templates
 
 
@@ -39,16 +38,10 @@ def _build_conv_context(conv: models.Conversation) -> dict:
 async def share_conversation(
     conv_id: UUID,
     request: Request,
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Enable sharing for a conversation; return updated sidebar item."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     conversation = db.scalars(
         select(models.Conversation).where(
@@ -75,16 +68,10 @@ async def share_conversation(
 async def unshare_conversation(
     conv_id: UUID,
     request: Request,
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Disable sharing for a conversation; return updated sidebar item."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     conversation = db.scalars(
         select(models.Conversation).where(
@@ -96,7 +83,7 @@ async def unshare_conversation(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     conversation.shared = False
-    conversation.shared_link = ""
+    conversation.shared_link = None
     db.commit()
     db.refresh(conversation)
 
@@ -110,16 +97,10 @@ async def unshare_conversation(
 async def delete_conversation(
     conv_id: UUID,
     request: Request,
+    uid: str = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """Soft-delete a conversation; return empty HTML so htmx removes the sidebar item."""
-
-    session_id = request.session.get("session_id")
-    uid = request.session.get("uid")
-    if not session_id or not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    if not session_is_valid(uid, session_id, db):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     conversation = db.scalars(
         select(models.Conversation).where(

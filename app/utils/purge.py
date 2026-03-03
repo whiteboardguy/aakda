@@ -10,8 +10,13 @@ from . import models
 from .print_utils import printStat
 
 
+# ---------------------------------------------------------------------------
+# Conversation purge
+# ---------------------------------------------------------------------------
+
+
 async def _purge_once(delete_after_days: int) -> None:
-    """Hard-delete soft-deleted conversations from the database, if enabled.
+    """Hard-delete soft-deleted conversations from the database.
 
     If delete_after_days is 0, all rows with deleted=True are removed.
     If delete_after_days > 0, only rows whose deleted_at is older than
@@ -44,7 +49,7 @@ async def _purge_once(delete_after_days: int) -> None:
                 f"Purge: permanently deleted {len(conversations)} conversation(s).",
             )
     except Exception as e:
-        printStat("c", f"Purge: error during purge — {e}")
+        printStat("c", f"Purge: error during conversation purge — {e}")
 
 
 async def run_purge_loop() -> None:
@@ -61,6 +66,9 @@ async def run_purge_loop() -> None:
         printStat("o", "Purge loop disabled (OPTIONS_PERMADELETE_WAIT_DAYS=-1).")
         return
 
+    # Run once immediately on startup so stale rows are cleared right away.
+    await _purge_once(delete_after)
+
     if delete_after == 0:
         printStat(
             "o",
@@ -76,10 +84,48 @@ async def run_purge_loop() -> None:
         )
         while True:
             now = datetime.now(timezone.utc)
-            # Seconds until next midnight UTC (windows users wouldn't get that)
             tomorrow_midnight = (now + timedelta(days=1)).replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
             sleep_seconds = (tomorrow_midnight - now).total_seconds()
             await asyncio.sleep(sleep_seconds)
             await _purge_once(delete_after)
+
+
+# ---------------------------------------------------------------------------
+# Session purge — runs every 30 minutes, cleans expired session rows
+# ---------------------------------------------------------------------------
+
+
+async def _purge_sessions_once() -> None:
+    """Hard-delete session rows whose expire_at timestamp has passed."""
+    now = datetime.now(timezone.utc)
+    try:
+        with Session(engine) as db:
+            expired = db.scalars(
+                select(models.Session).where(models.Session.expire_at < now)
+            ).all()
+
+            if not expired:
+                return
+
+            for session in expired:
+                db.delete(session)
+
+            db.commit()
+            printStat(
+                "o",
+                f"Session purge: removed {len(expired)} expired session(s).",
+            )
+    except Exception as e:
+        printStat("c", f"Session purge: error — {e}")
+
+
+async def run_session_purge_loop() -> None:
+    """Runs every 30 minutes and removes expired session rows from the database."""
+    printStat("o", "Session purge loop started (interval: 30 minutes).")
+    # Run immediately on startup.
+    await _purge_sessions_once()
+    while True:
+        await asyncio.sleep(1800)
+        await _purge_sessions_once()

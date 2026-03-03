@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from .cfg import settings
-from .routes import auth, conversations, test, users
+from .routes import auth, conversations, users
 from .utils import models
 from .utils.database import get_db, engine
-from .utils.purge import run_purge_loop
+from .utils.purge import run_purge_loop, run_session_purge_loop
 from .utils.sessions import session_is_valid
 from .utils.templating import templates
 
@@ -24,12 +24,15 @@ models.Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     purge_task = asyncio.create_task(run_purge_loop())
+    session_purge_task = asyncio.create_task(run_session_purge_loop())
     yield
     purge_task.cancel()
-    try:
-        await purge_task
-    except asyncio.CancelledError:
-        pass
+    session_purge_task.cancel()
+    for task in (purge_task, session_purge_task):
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -44,7 +47,6 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-app.include_router(test.router)
 app.include_router(auth.router)
 app.include_router(conversations.router)
 app.include_router(users.router)
