@@ -1,0 +1,12 @@
+{# ============================================================
+   partials/sidebar_list.html
+   Context: conversations (list of {uuid, title, updated_at, shared, shared_link})
+   Rendered into #sidebar-history-list via GET /conversations/list
+   ============================================================ #}
+{% if conversations %}
+  {% for conv in conversations %}
+    {% include "partials/sidebar_item.html" %}
+  {% endfor %}
+{% else %}
+  <li class="sidebar-empty">No conversations yet.</li>
+{% endif %}

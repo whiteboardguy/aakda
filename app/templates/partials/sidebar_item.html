@@ -1,0 +1,75 @@
+{# ============================================================
+   partials/sidebar_item.html
+   Context: conv { uuid, title, updated_at, shared, shared_link }
+   ============================================================ #}
+<li id="sidebar-conv-{{ conv.uuid }}" class="sidebar-item">
+
+  <div class="sidebar-item-inner">
+
+    {# Conversation link — loads the thread and updates form action #}
+    <a class="sidebar-item-link"
+       hx-get="/conversations/fetch/{{ conv.uuid }}"
+       hx-target="#messages-content"
+       hx-swap="innerHTML"
+       hx-push-url="/c/{{ conv.uuid }}"
+       hx-on::after-request="window.updateFormAction('{{ conv.uuid }}')">
+      <span class="sidebar-item-title">{{ conv.title }}</span>
+      <span class="sidebar-item-time">{{ conv.updated_at | timeago }}</span>
+    </a>
+
+    {# Shared indicator dot (visible when shared) #}
+    {% if conv.shared %}
+      <span class="shared-badge" title="Shared"></span>
+    {% endif %}
+
+    {# Three-dot options menu #}
+    <div class="dropdown sidebar-item-menu">
+      <label tabindex="0"
+             class="sidebar-item-menu-btn"
+             title="Options">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+             viewBox="0 0 24 24">
+          <circle cx="12" cy="5"  r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </label>
+
+      <ul tabindex="0"
+          class="dropdown-content">
+
+        {# Share / Unshare #}
+        {% if conv.shared %}
+          <li>
+            <button hx-post="/conversations/opts/unshare/{{ conv.uuid }}"
+                    hx-target="#sidebar-conv-{{ conv.uuid }}"
+                    hx-swap="outerHTML">
+              Unshare
+            </button>
+          </li>
+        {% else %}
+          <li>
+            <button hx-post="/conversations/opts/share/{{ conv.uuid }}"
+                    hx-target="#sidebar-conv-{{ conv.uuid }}"
+                    hx-swap="outerHTML">
+              Share
+            </button>
+          </li>
+        {% endif %}
+
+        {# Delete #}
+        <li>
+          <button class="text-error"
+                  hx-post="/conversations/opts/delete/{{ conv.uuid }}"
+                  hx-target="#sidebar-conv-{{ conv.uuid }}"
+                  hx-swap="outerHTML"
+                  hx-confirm="Delete this conversation?">
+            Delete
+          </button>
+        </li>
+
+      </ul>
+    </div>
+
+  </div>
+</li>

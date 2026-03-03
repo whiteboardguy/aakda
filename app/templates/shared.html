@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Aakda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/chat.css" />
+<link rel="stylesheet" href="/static/css/shared.css" />
+{% endblock %}
+
+{% block content %}
+<div class="shared-page">
+
+  <!-- Header -->
+  <header class="shared-header">
+    <div class="shared-header-inner">
+      <span class="shared-header-label">Shared conversation · read only</span>
+      <button id="theme-toggle" class="shared-theme-toggle" title="Toggle theme">
+        <span id="theme-icon"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Thread -->
+  <main class="shared-main">
+    <div class="shared-thread">
+
+      {% if title %}
+      <h2 class="shared-title">{{ title }}</h2>
+      {% endif %}
+
+      {% if message_pairs %}
+        {% for pair in message_pairs %}
+          {% set user_msg = pair.user_msg %}
+          {% set bot_msg  = pair.bot_msg %}
+          {% include "partials/message_group.html" %}
+        {% endfor %}
+      {% else %}
+        <div class="shared-empty">
+          <p class="shared-empty-text">This conversation has no messages yet.</p>
+        </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="shared-footer">
+    <p class="shared-footer-text">
+      Powered by <a href="/" class="shared-footer-link">Aakda</a>
+    </p>
+  </footer>
+
+</div>
+{% endblock %}

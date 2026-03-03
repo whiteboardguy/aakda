@@ -1,0 +1,201 @@
+/* ============================================================
+   login.css — authentication pages (login + register)
+   Monospace, centered, editorial. No card, no shadow, no radius.
+   ============================================================ */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ak-bg);
+  padding: 2rem 1.5rem;
+  font-family: var(--ak-font-mono);
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.25rem;
+  text-align: center;
+}
+
+/* ── Brand ── */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-brand-name {
+  font-family: var(--ak-font-mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--ak-text);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+/* Accent rule below brand */
+.auth-brand::after {
+  content: '';
+  display: block;
+  width: 2rem;
+  height: 2px;
+  background: var(--ak-accent);
+  border-radius: 1px;
+}
+
+/* ── Error alert ── */
+.auth-error {
+  display: none;
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--ak-error);
+  padding: 0.6rem 0.85rem;
+  font-family: var(--ak-font-mono);
+  font-size: 0.78rem;
+  color: var(--ak-error);
+  line-height: 1.5;
+  text-align: left;
+}
+.auth-error.visible { display: block; }
+
+/* ── Form ── */
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Uppercase mono label */
+.auth-label {
+  font-family: var(--ak-font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--ak-secondary);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  align-self: flex-start;
+}
+
+/* Bottom-border only input — centered mono text */
+.auth-input {
+  width: 100%;
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--ak-lines);
+  border-radius: 0;
+  color: var(--ak-text);
+  font-size: 0.9rem;
+  font-family: var(--ak-font-mono);
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s ease;
+  -webkit-appearance: none;
+}
+.auth-input::placeholder {
+  color: var(--ak-secondary);
+  opacity: 0.45;
+}
+.auth-input:focus {
+  border-bottom-color: var(--ak-accent);
+  border-bottom-width: 2px;
+}
+
+/* Submit — full-width, accent-filled */
+.auth-submit-btn {
+  width: 100%;
+  padding: 0.7rem;
+  margin-top: 0.5rem;
+  background: var(--ak-accent);
+  border: none;
+  border-radius: 0;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: var(--ak-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.auth-submit-btn:hover  { background: var(--ak-accent-hover); }
+.auth-submit-btn:active { opacity: 0.85; }
+.auth-submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Footer link */
+.auth-footer {
+  font-family: var(--ak-font-mono);
+  font-size: 0.75rem;
+  color: var(--ak-secondary);
+}
+.auth-footer a {
+  color: var(--ak-accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+.auth-footer a:hover {
+  border-bottom-color: var(--ak-accent);
+}
+
+/* ── Password visibility toggle ── */
+.auth-password-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.auth-password-wrap .auth-input {
+  padding-right: 2rem;
+}
+
+.auth-pw-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ak-secondary);
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+}
+.auth-pw-toggle:hover { color: var(--ak-accent); }
+
+.auth-pw-toggle svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: block;
+}
+
+/* show eye-open by default; hide eye-closed */
+.auth-pw-toggle .pw-icon-show { display: block; }
+.auth-pw-toggle .pw-icon-hide { display: none; }
+
+/* when password is revealed, swap icons */
+.auth-pw-toggle.revealed .pw-icon-show { display: none; }
+.auth-pw-toggle.revealed .pw-icon-hide { display: block; }

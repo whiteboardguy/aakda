@@ -1,49 +1,100 @@
-from sqlalchemy.orm import Session
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from uuid import UUID
 
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import not_, select
+from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from .cfg import settings
-
-from .routes import test, auth, users, conversations
-
-from .utils.database import get_db, engine
-
+from .routes import auth, conversations, test, users
+from .routes import chat as chat_routes
 from .utils import models
-
-db: Session = Depends(get_db)
+from .utils.database import get_db, engine
+from .utils.sessions import session_is_valid
+from .utils.templating import templates
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# cors_origins = [
-#         "http://localhost",
-#         "http://localhost:5555",
-#         '*'
-# ]
-#
-# app.add_middleware(
-#         CORSMiddleware,
-#         allow_origins=cors_origins,
-#         allow_credentials=True,
-#         allow_methods=['*'],
-#         allow_headers=['*'],
-# )
-
 app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.security_session_secret,
-        session_cookie="cookies",
-        same_site="lax",
-        path="/",
-) # ty: ignore[invalid-argument-type]
+    SessionMiddleware,
+    secret_key=settings.security_session_secret,
+    session_cookie="cookies",
+    same_site="lax",
+    path="/",
+)  # ty: ignore[invalid-argument-type]
 
-
-# app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(test.router)
 app.include_router(auth.router)
 app.include_router(conversations.router)
+app.include_router(chat_routes.router)
+
+
+# ---------------------------------------------------------------------------
+# Auth helper used by page-serving routes
+# ---------------------------------------------------------------------------
+def _is_authenticated(request: Request, db: Session) -> bool:
+    try:
+        session_id = request.session.get("session_id")
+        uid = request.session.get("uid")
+        if not session_id or not uid:
+            return False
+        return session_is_valid(uid, session_id, db)
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Page routes
+# ---------------------------------------------------------------------------
+
+
+@app.get("/")
+async def root(request: Request, db: Session = Depends(get_db)):
+    if not _is_authenticated(request, db):
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse(
+        "chat.html", {"request": request, "initial_conv_id": None}
+    )
+
+
+@app.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.get("/register")
+async def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+@app.get("/c/{conv_id}")
+async def chat_page_conv(
+    conv_id: UUID, request: Request, db: Session = Depends(get_db)
+):
+    """Serve the chat shell pre-loaded with a specific conversation."""
+    if not _is_authenticated(request, db):
+        return RedirectResponse("/login", status_code=302)
+
+    uid = request.session.get("uid")
+    conversation = db.scalars(
+        select(models.Conversation).where(
+            (models.Conversation.uid == conv_id)
+            & (models.Conversation.user_uid == uid)
+            & not_(models.Conversation.deleted)
+        )
+    ).first()
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return templates.TemplateResponse(
+        "chat.html",
+        {"request": request, "initial_conv_id": str(conv_id)},
+    )

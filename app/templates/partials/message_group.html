@@ -1,0 +1,107 @@
+{# ============================================================
+   partials/message_group.html
+   Context: user_msg { message, message_index }
+            bot_msg  { message, is_render, render_plot_html,
+                       render_html_data, sources, model,
+                       message_retries, tools_called }
+            conv_id
+   ============================================================ #}
+<div class="message-group"
+     data-message-index="{{ user_msg.message_index }}"
+     data-conv-id="{{ conv_id }}">
+
+  {# ── User message ── #}
+  <div class="user-message-wrapper">
+    <span class="user-label">You</span>
+    <div class="user-bubble">{{ user_msg.message }}</div>
+  </div>
+
+  {# ── AI message ── #}
+  <div class="ai-row">
+
+    {# Header: graph icon + label #}
+    <div class="ai-header">
+      <svg class="ai-header-icon ai-graph-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path opacity="0.5" d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 14L8.79689 11.8437C9.50894 10.9893 9.86496 10.562 10.3333 10.562C10.8017 10.562 11.1577 10.9893 11.8698 11.8437L12.1302 12.1563C12.8423 13.0107 13.1983 13.438 13.6667 13.438C14.135 13.438 14.4911 13.0107 15.2031 12.1563L17 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="ai-label">Aakda</span>
+    </div>
+
+    {# Content #}
+    <div class="ai-content">
+
+      {# Prose text — rendered by marked.js via [data-markdown] #}
+      {% if bot_msg.message %}
+        <div class="ak-prose" data-markdown>{{ bot_msg.message }}</div>
+      {% endif %}
+
+      {# ── Plotly chart (sandboxed iframe) ── #}
+      {% if bot_msg.is_render and bot_msg.render_plot_html %}
+        <div class="chart-container">
+          {% set _chart_reset = '<style>html,body{margin:0;padding:0;overflow:hidden;}</style><script>window.addEventListener("load",function(){var h=document.documentElement.scrollHeight||document.body.scrollHeight;parent.postMessage({type:"ak-chart-resize",height:h},"*");});<\/script>' %}
+          <iframe sandbox="allow-scripts"
+                  srcdoc="{{ (_chart_reset + bot_msg.render_plot_html) | e }}"
+                  class="chart-iframe"
+                  loading="lazy"
+                  title="Generated chart">
+          </iframe>
+        </div>
+      {% endif %}
+
+      {# ── Raw data (collapsible) ── #}
+      {% if bot_msg.render_html_data %}
+        <details>
+          <summary class="raw-data-toggle">
+            <svg class="raw-data-chevron" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            Raw Data
+          </summary>
+          <div class="raw-data-body">
+            {{ bot_msg.render_html_data | safe }}
+          </div>
+        </details>
+      {% endif %}
+
+      {# ── Sources ── #}
+      {% if bot_msg.sources and bot_msg.sources | length > 0 %}
+        <div class="sources-section">
+          <p class="sources-label">Sources</p>
+          <ul class="sources-list">
+            {% for source in bot_msg.sources %}
+              <li class="source-item">
+                <a href="{{ source.link }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="source-link">{{ source.source }}</a>
+                {% if source.summary %}
+                  <span class="source-summary">— {{ source.summary }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {# ── Meta footer — plain monospace dot-separated text ── #}
+      {% if bot_msg.model or (bot_msg.message_retries and bot_msg.message_retries > 0) or (bot_msg.tools_called and bot_msg.tools_called | length > 0) %}
+      <div class="message-meta">
+        {%- if bot_msg.model -%}{{ bot_msg.model }}{%- endif -%}
+        {%- if bot_msg.message_retries and bot_msg.message_retries > 0 -%}
+          {%- if bot_msg.model %} · {% endif -%}
+          {{ bot_msg.message_retries }} retr{{ 'y' if bot_msg.message_retries == 1 else 'ies' }}
+        {%- endif -%}
+        {%- if bot_msg.tools_called and bot_msg.tools_called | length > 0 -%}
+          {%- if bot_msg.model or (bot_msg.message_retries and bot_msg.message_retries > 0) %} · {% endif -%}
+          {{ bot_msg.tools_called | length }} tool{{ 's' if bot_msg.tools_called | length != 1 else '' }}
+        {%- endif -%}
+      </div>
+      {% endif %}
+
+    </div>{# end ai-content #}
+  </div>{# end ai-row #}
+
+</div>{# end message-group #}

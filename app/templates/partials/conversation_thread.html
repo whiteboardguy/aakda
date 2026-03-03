@@ -1,0 +1,9 @@
+{# ============================================================
+   partials/conversation_thread.html
+   Context: message_pairs (list of {user_msg, bot_msg}), conv_id
+   ============================================================ #}
+{% for pair in message_pairs %}
+  {% set user_msg = pair.user_msg %}
+  {% set bot_msg  = pair.bot_msg %}
+  {% include "partials/message_group.html" %}
+{% endfor %}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Aakda{% endblock %}</title>
+
+  <!-- DaisyUI (components) -->
+  <link href="/static/css/daisyui.min.css" rel="stylesheet" />
+  <!-- Tailwind CSS (utilities) -->
+  <script src="/static/js/tailwind.cdn.js"></script>
+  <!-- highlight.js — theme CSS loaded before content renders -->
+  <link rel="stylesheet" href="/static/css/hljs-github-dark-dimmed.min.css" />
+
+  <!-- Site-wide design system -->
+  <link rel="stylesheet" href="/static/css/_site.css" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  {% block content %}{% endblock %}
+
+  <!-- HTMX (loaded synchronously so attributes are processed immediately) -->
+  <script src="/static/js/htmx.min.js"></script>
+  <!-- HTMX SSE extension -->
+  <script src="/static/js/htmx-sse.js"></script>
+  <!-- Markdown parser -->
+  <script src="/static/js/marked.min.js"></script>
+  <!-- Code syntax highlighter -->
+  <script src="/static/js/highlight.min.js"></script>
+  <!-- App JS -->
+  <script src="/static/js/main.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

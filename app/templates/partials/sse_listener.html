@@ -1,0 +1,108 @@
+{# ============================================================
+   partials/sse_listener.html
+   Context: job_id, conv_id, query (the user's message text)
+
+   Structure
+   ─────────
+   #sse-wrapper-{job_id}   ← outerHTML-swapped by done/error events
+     user preview bubble   ← shown immediately
+     AI loading row        ← typing dots + live status text
+     invisible SSE trigger spans
+   ============================================================ #}
+
+{# ── OOB sidebar insert — only on new conversations ── #}
+{% if conv %}
+<li id="sidebar-conv-{{ conv.uuid }}"
+    class="sidebar-item active"
+    hx-swap-oob="afterbegin:#sidebar-history-list">
+  <div class="sidebar-item-inner">
+    <a class="sidebar-item-link"
+       hx-get="/conversations/fetch/{{ conv.uuid }}"
+       hx-target="#messages-content"
+       hx-swap="innerHTML"
+       hx-push-url="/c/{{ conv.uuid }}"
+       hx-on::after-request="window.updateFormAction('{{ conv.uuid }}')">
+      <span class="sidebar-item-title">{{ conv.title }}</span>
+      <span class="sidebar-item-time">just now</span>
+    </a>
+    <div class="dropdown sidebar-item-menu">
+      <label tabindex="0" class="sidebar-item-menu-btn" title="Options">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="5"  r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </label>
+      <ul tabindex="0" class="dropdown-content">
+        <li>
+          <button hx-post="/conversations/opts/share/{{ conv.uuid }}"
+                  hx-target="#sidebar-conv-{{ conv.uuid }}"
+                  hx-swap="outerHTML">Share</button>
+        </li>
+        <li>
+          <button class="text-error"
+                  hx-post="/conversations/opts/delete/{{ conv.uuid }}"
+                  hx-target="#sidebar-conv-{{ conv.uuid }}"
+                  hx-swap="outerHTML"
+                  hx-confirm="Delete this conversation?">Delete</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</li>
+{% endif %}
+
+<div id="sse-wrapper-{{ job_id }}"
+     class="msg-loading-group"
+     hx-ext="sse"
+     sse-connect="/chat/events/{{ job_id }}"
+     {% if conv %}hx-on:htmx:load="window.updateFormAction('{{ conv.uuid }}')"{% endif %}>
+
+  {# ── User message preview ── #}
+  <div class="user-message-wrapper">
+    <span class="user-label">You</span>
+    <div class="user-bubble">{{ query }}</div>
+  </div>
+
+  {# ── AI loading row ── #}
+  <div class="ai-loading-row">
+
+    {# Header: graph icon + label #}
+    <div class="ai-header">
+      <svg class="ai-header-icon ai-graph-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path opacity="0.5" d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 14L8.79689 11.8437C9.50894 10.9893 9.86496 10.562 10.3333 10.562C10.8017 10.562 11.1577 10.9893 11.8698 11.8437L12.1302 12.1563C12.8423 13.0107 13.1983 13.438 13.6667 13.438C14.135 13.438 14.4911 13.0107 15.2031 12.1563L17 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="ai-label">Aakda</span>
+    </div>
+
+    <div class="ai-loading-content">
+      {# Live status text — updated by SSE "status" events #}
+      <span id="sse-status-{{ job_id }}"
+            class="ai-status-text"
+            sse-swap="status"
+            hx-target="#sse-status-{{ job_id }}"
+            hx-swap="innerHTML">Thinking…</span>
+      {# Animated typing dots #}
+      <div class="typing-dots">
+        <span class="ak-dot"></span>
+        <span class="ak-dot"></span>
+        <span class="ak-dot"></span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Invisible SSE trigger: done ── #}
+  <span style="display:none"
+        sse-swap="done"
+        hx-target="#sse-wrapper-{{ job_id }}"
+        hx-swap="outerHTML"></span>
+
+  {# ── Invisible SSE trigger: error ── #}
+  <span style="display:none"
+        sse-swap="error"
+        hx-target="#sse-wrapper-{{ job_id }}"
+        hx-swap="outerHTML"></span>
+
+</div>
