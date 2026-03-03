@@ -29,10 +29,23 @@ function renderMarkdown() {
   }
 }
 
-/* Scroll messages area to bottom */
-function scrollToBottom() {
+/* Auto-scroll: skip if user has scrolled up more than 80px from bottom */
+let _userScrolledUp = false;
+
+function _initScrollGuard() {
   const area = document.getElementById('messages-scroll');
-  if (area) {
+  if (!area) return;
+  area.addEventListener('scroll', () => {
+    const distFromBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+    _userScrolledUp = distFromBottom > 80;
+  }, { passive: true });
+}
+
+/* Scroll messages area to bottom (skipped when user has scrolled up) */
+function scrollToBottom(force) {
+  const area = document.getElementById('messages-scroll');
+  if (!area) return;
+  if (force || !_userScrolledUp) {
     area.scrollTop = area.scrollHeight;
   }
 }
@@ -284,8 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* Initial render and scroll on page load */
+  _initScrollGuard();
   renderMarkdown();
-  scrollToBottom();
+  scrollToBottom(true);
 });
 
 /* Delete-all modal */
@@ -352,6 +366,8 @@ document.body.addEventListener('htmx:afterRequest', evt => {
   const elt = evt.detail.elt;
 
   if (elt && elt.id === 'chat-form' && evt.detail.successful) {
+    /* User sent a message — reset scroll guard so response auto-scrolls */
+    _userScrolledUp = false;
     const textarea = document.getElementById('query-input');
     if (textarea) {
       textarea.value = '';
