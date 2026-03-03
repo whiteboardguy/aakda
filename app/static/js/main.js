@@ -117,6 +117,38 @@ window.handleAuthResponse = function(event, successRedirect) {
 };
 
 /* ============================================================
+   INLINE DELETE CONFIRMATION
+   Intercepts clicks on [data-delete-btn]: first click arms the
+   button ("Confirm?"), second click fires the htmx request
+   (hx-trigger="confirmed"). Clicking outside or pressing Escape
+   resets any armed buttons back to "Delete".
+   ============================================================ */
+
+function resetDeleteButtons() {
+  document.querySelectorAll('[data-delete-btn][data-armed]').forEach(btn => {
+    btn.removeAttribute('data-armed');
+    btn.textContent = 'Delete';
+  });
+}
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-delete-btn]');
+  if (!btn) {
+    resetDeleteButtons();
+    return;
+  }
+  if (btn.hasAttribute('data-armed')) {
+    /* Second click — fire the htmx request */
+    htmx.trigger(btn, 'confirmed');
+  } else {
+    /* First click — arm: reset others, then arm this one */
+    resetDeleteButtons();
+    btn.setAttribute('data-armed', '');
+    btn.textContent = 'Confirm?';
+  }
+});
+
+/* ============================================================
    DOM READY
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -233,8 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById('query-input');
       if (input) { input.focus(); input.select(); }
     }
-    /* Esc — blur input */
+    /* Esc — reset any pending delete confirmation, then blur input */
     if (e.key === 'Escape') {
+      closeDeleteAllModal();
+      resetDeleteButtons();
       document.activeElement?.blur?.();
     }
   });
@@ -251,6 +285,78 @@ document.addEventListener('DOMContentLoaded', () => {
   /* 6. Initial markdown render + scroll ------------------- */
   renderMarkdown();
   scrollToBottom();
+});
+
+/* ============================================================
+   DELETE-ALL CONVERSATIONS MODAL
+   ============================================================ */
+
+window.openDeleteAllModal = function() {
+  const modal = document.getElementById('delete-all-modal');
+  if (!modal) return;
+  /* Reset to initial state */
+  const execBtn = document.getElementById('delete-all-execute');
+  if (execBtn) { execBtn.textContent = 'Delete'; execBtn.removeAttribute('data-armed'); execBtn.disabled = false; }
+  const cancelBtn = document.getElementById('delete-all-cancel');
+  if (cancelBtn) cancelBtn.disabled = false;
+  modal.classList.add('open');
+};
+
+window.closeDeleteAllModal = function() {
+  const modal = document.getElementById('delete-all-modal');
+  if (modal) modal.classList.remove('open');
+};
+
+window.handleDeleteAllConfirm = function(btn) {
+  if (!btn.hasAttribute('data-armed')) {
+    /* First click — arm */
+    btn.setAttribute('data-armed', '');
+    btn.textContent = 'Confirm?';
+    return;
+  }
+  /* Second click — execute */
+  btn.disabled = true;
+  const cancelBtn = document.getElementById('delete-all-cancel');
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  const convIds = Array.from(
+    document.querySelectorAll('#sidebar-history-list [id^="sidebar-conv-"]')
+  ).map(el => el.id.replace('sidebar-conv-', ''));
+
+  if (convIds.length === 0) {
+    closeDeleteAllModal();
+    return;
+  }
+
+  let i = 0;
+  function deleteNext() {
+    if (i >= convIds.length) {
+      /* All done — clear sidebar, reset form, close modal */
+      const list = document.getElementById('sidebar-history-list');
+      if (list) list.innerHTML = '';
+      window.resetFormToNew();
+      closeDeleteAllModal();
+      return;
+    }
+    const id = convIds[i++];
+    fetch(`/conversations/opts/delete/${id}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+    }).finally(() => {
+      const el = document.getElementById(`sidebar-conv-${id}`);
+      if (el) el.remove();
+      setTimeout(deleteNext, 100);
+    });
+  }
+  deleteNext();
+};
+
+/* Close on backdrop click */
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('delete-all-modal');
+  if (modal && modal.classList.contains('open') && e.target === modal) {
+    closeDeleteAllModal();
+  }
 });
 
 /* ============================================================

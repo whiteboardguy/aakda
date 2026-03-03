@@ -1,18 +1,16 @@
 import asyncio
 import json
-import uuid
 from datetime import datetime, timezone
-from itertools import zip_longest
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
-from sqlalchemy import not_, select, update
+from sqlalchemy import not_, select
 from sqlalchemy.orm import Session, attributes
 
 from . import conv_opts
-from ..utils import jobs, models, schemas
+from ..utils import status as task_status, models, schemas
 from ..utils.database import engine, get_db
 from ..utils.print_utils import printStat
 from ..utils.sandbox.sandbox import fetch_graph
@@ -25,11 +23,9 @@ router.include_router(conv_opts.router)
 
 # ---------------------------------------------------------------------------
 # Background job: runs fetch_graph off the event loop, persists result,
-# emits SSE events.  remove_job is intentionally NOT called here — the SSE
-# generator in chat.py owns that responsibility.
+# updates in-memory status dict so the poll endpoint can serve progress.
 # ---------------------------------------------------------------------------
 async def _run_job(
-    job_id: str,
     conv_uid: str,
     user_uid: str,
     query: str,
@@ -39,14 +35,11 @@ async def _run_job(
     snapshot_user_messages: list,
     snapshot_bot_messages: list,
 ) -> None:
-    queue = jobs.get_job(job_id)
-    if queue is None:
-        return
 
     loop = asyncio.get_running_loop()
 
     def on_status(msg: str) -> None:
-        loop.call_soon_threadsafe(queue.put_nowait, {"type": "status", "data": msg})
+        loop.call_soon_threadsafe(task_status.set_status, conv_uid, message_index, msg)
 
     try:
         result = await asyncio.to_thread(
@@ -62,8 +55,8 @@ async def _run_job(
 
         result["message_index"] = message_index
 
-        # Persist with an independent DB session and,
-        # checking if the conversation belongs to the user.
+        # Persist with an independent DB session,
+        # checking that the conversation belongs to the user.
         with Session(engine) as db:
             conversation = db.scalars(
                 select(models.Conversation).where(
@@ -81,32 +74,16 @@ async def _run_job(
             conversation.updated_at = datetime.now(timezone.utc)
             db.commit()
 
-        # Normalise json fields before rendering.
-        bot_msg = dict(result)
-        if isinstance(bot_msg.get("sources"), str):
-            bot_msg["sources"] = json.loads(bot_msg["sources"])
-        if isinstance(bot_msg.get("tools_called"), str):
-            bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
-
-        user_msg_dict = {"message": query, "message_index": message_index}
-
-        # Sends it to the message grouping partial. 
-        # It handles each section/bundle of user message, bot reply/render/data, metadata
-        html = templates.env.get_template("partials/message_group.html").render(
-            {
-                "user_msg": user_msg_dict,
-                "bot_msg": bot_msg,
-                "conv_id": conv_uid,
-            }
-        )
-        queue.put_nowait({"type": "done", "data": html.replace("\n", " ")})
-
     except Exception as exc:
-        printStat("c", f"Background job {job_id} failed: {exc}")
-        error_html = templates.env.get_template("partials/error_bubble.html").render(
-            {"error_message": str(exc)}
+        printStat(
+            "c", f"Background job conv={conv_uid} idx={message_index} failed: {exc}"
         )
-        queue.put_nowait({"type": "error", "data": error_html.replace("\n", " ")})
+        task_status.set_error(conv_uid, message_index, str(exc))
+
+    finally:
+        # Only clear the status entry — errors are cleared by the poll endpoint
+        # after it has delivered the error_bubble to the client.
+        task_status._status.pop(f"{conv_uid}:{message_index}", None)
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +95,7 @@ async def create_conversation(
     user_input: Annotated[schemas.Conversation_Create_Request, Form()],
     db: Session = Depends(get_db),
 ):
-    """Create a new conversation, spawn background AI job, return SSE listener."""
+    """Create a new conversation, spawn background AI job, return polling loader."""
 
     session_id = request.session.get("session_id")
     uid = request.session.get("uid")
@@ -142,12 +119,10 @@ async def create_conversation(
     db.refresh(new_conversation)
 
     conv_uid = str(new_conversation.uid)
-    job_id = str(uuid.uuid4()) # create a job uid
-    q = jobs.create_job(job_id)  # noqa: F841 — queue handed off to background task
+    task_status.set_status(conv_uid, 1, "Working…")
 
     asyncio.create_task(
         _run_job(
-            job_id=job_id,
             conv_uid=conv_uid,
             user_uid=uid,
             query=user_input.query,
@@ -160,12 +135,13 @@ async def create_conversation(
     )
 
     return templates.TemplateResponse(
-        "partials/sse_listener.html",
+        "partials/loading_state.html",
         {
             "request": request,
-            "job_id": job_id,
             "conv_id": conv_uid,
+            "message_index": 1,
             "query": user_input.query,
+            "status_text": "Working…",
             "conv": {
                 "uuid": conv_uid,
                 "title": user_input.query[:40],
@@ -184,7 +160,7 @@ async def continue_conversation(
     user_input: Annotated[schemas.Conversation_Continue_Request, Form()],
     db: Session = Depends(get_db),
 ):
-    """Continue an existing conversation; spawn background AI job, return SSE listener."""
+    """Continue an existing conversation; spawn background AI job, return polling loader."""
 
     session_id = request.session.get("session_id")
     uid = request.session.get("uid")
@@ -214,18 +190,14 @@ async def continue_conversation(
     db.commit()
 
     # Snapshot after appending the new user message.
-    # Fed to the bot. Better than fetch from db 
-    # if db session closes or db gets appended.
     snapshot_user = list(conversation.user_messages)
     snapshot_bot = list(conversation.bot_messages)
 
     conv_uid = str(conv_id)
-    job_id = str(uuid.uuid4())
-    jobs.create_job(job_id)
+    task_status.set_status(conv_uid, new_message_index, "Working…")
 
     asyncio.create_task(
         _run_job(
-            job_id=job_id,
             conv_uid=conv_uid,
             user_uid=uid,
             query=user_input.query,
@@ -238,14 +210,97 @@ async def continue_conversation(
     )
 
     return templates.TemplateResponse(
-        "partials/sse_listener.html",
+        "partials/loading_state.html",
         {
             "request": request,
-            "job_id": job_id,
             "conv_id": conv_uid,
+            "message_index": new_message_index,
             "query": user_input.query,
+            "status_text": "Working…",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /conversations/poll/{conv_id}/{message_index}
+# ---------------------------------------------------------------------------
+@router.get("/poll/{conv_id}/{message_index}")
+async def poll_message(
+    conv_id: UUID,
+    message_index: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Poll endpoint: returns loading_state (not done), message_group (done), or error_bubble."""
+
+    session_id = request.session.get("session_id")
+    uid = request.session.get("uid")
+    if not session_id or not uid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    if not session_is_valid(uid, session_id, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    conv_uid = str(conv_id)
+
+    # Check for error first.
+    error = task_status.get_error(conv_uid, message_index)
+    if error is not None:
+        task_status.clear(conv_uid, message_index)
+        error_html = templates.env.get_template("partials/error_bubble.html").render(
+            {"error_message": error}
+        )
+        return HTMLResponse(
+            error_html,
+            headers={
+                "HX-Retarget": f"#poll-{conv_uid}-{message_index}",
+                "HX-Reswap": "outerHTML",
+            },
+        )
+
+    # Check if the bot message has been persisted.
+    conversation = db.scalars(
+        select(models.Conversation).where(
+            (models.Conversation.uid == conv_id)
+            & (models.Conversation.user_uid == uid)
+            & not_(models.Conversation.deleted)
+        )
+    ).first()
+
+    if conversation:
+        bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
+        raw_bot = bot_by_index.get(message_index)
+        if raw_bot is not None:
+            # Done — render the completed message group.
+            bot_msg = dict(raw_bot)
+            if isinstance(bot_msg.get("sources"), str):
+                bot_msg["sources"] = json.loads(bot_msg["sources"])
+            if isinstance(bot_msg.get("tools_called"), str):
+                bot_msg["tools_called"] = json.loads(bot_msg["tools_called"])
+
+            user_by_index = {
+                msg["message_index"]: msg for msg in conversation.user_messages
+            }
+            user_msg = user_by_index.get(
+                message_index, {"message": "", "message_index": message_index}
+            )
+
+            return templates.TemplateResponse(
+                "partials/message_group.html",
+                {
+                    "request": request,
+                    "user_msg": user_msg,
+                    "bot_msg": bot_msg,
+                    "conv_id": conv_uid,
+                },
+                headers={
+                    "HX-Retarget": f"#poll-{conv_uid}-{message_index}",
+                    "HX-Reswap": "outerHTML",
+                },
+            )
+
+    # Still in progress — return just the updated status text.
+    current_status = task_status.get_status(conv_uid, message_index)
+    return HTMLResponse(current_status)
 
 
 # ---------------------------------------------------------------------------

@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import asynccontextmanager
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -10,15 +12,27 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .cfg import settings
 from .routes import auth, conversations, test, users
-from .routes import chat as chat_routes
 from .utils import models
 from .utils.database import get_db, engine
+from .utils.purge import run_purge_loop
 from .utils.sessions import session_is_valid
 from .utils.templating import templates
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    purge_task = asyncio.create_task(run_purge_loop())
+    yield
+    purge_task.cancel()
+    try:
+        await purge_task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     SessionMiddleware,
@@ -33,7 +47,6 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(test.router)
 app.include_router(auth.router)
 app.include_router(conversations.router)
-app.include_router(chat_routes.router)
 app.include_router(users.router)
 
 

@@ -171,6 +171,10 @@
 }
 .sidebar-icon-btn:hover { color: var(--ak-accent); }
 
+/* Delete-all button — error-colored, dimmed at rest */
+.sidebar-delete-all-btn { color: var(--ak-error); opacity: 0.5; }
+.sidebar-delete-all-btn:hover { color: var(--ak-error); opacity: 1; }
+
 /* Logout as text link */
 .sidebar-logout-btn {
   font-size: 0.75rem;
@@ -991,4 +995,101 @@ summary.raw-data-toggle::-webkit-details-marker {
 @keyframes ak-toast-out {
   from { opacity: 1; transform: translateY(0); }
   to   { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ============================================================
+   DELETE-ALL CONFIRMATION MODAL
+   ============================================================ */
+.ak-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.ak-confirm-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.ak-confirm-card {
+  background: var(--ak-bg-elevated);
+  border: 1px solid var(--ak-border-mid);
+  box-shadow: var(--ak-shadow-lg);
+  padding: 1.5rem;
+  width: min(380px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 200ms ease;
+}
+.ak-confirm-overlay.open .ak-confirm-card {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.ak-confirm-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ak-text);
+  margin: 0;
+}
+
+.ak-confirm-desc {
+  font-size: 0.8125rem;
+  color: var(--ak-text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.ak-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.ak-confirm-btn {
+  font-size: 0.8125rem;
+  font-family: inherit;
+  padding: 0.4rem 1rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  min-width: 80px;
+  transition: background var(--ak-transition), color var(--ak-transition),
+              border-color var(--ak-transition);
+}
+.ak-confirm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ak-confirm-btn-cancel {
+  background: transparent;
+  border-color: var(--ak-border-mid);
+  color: var(--ak-text-muted);
+}
+.ak-confirm-btn-cancel:hover:not(:disabled) {
+  background: var(--ak-bg-hover);
+  color: var(--ak-text);
+}
+
+.ak-confirm-btn-delete {
+  background: transparent;
+  border-color: var(--ak-error);
+  color: var(--ak-error);
+}
+.ak-confirm-btn-delete:hover:not(:disabled) {
+  background: var(--ak-error);
+  color: #fff;
 }

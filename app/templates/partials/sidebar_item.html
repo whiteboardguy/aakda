@@ -60,10 +60,11 @@
         {# Delete #}
         <li>
           <button class="text-error"
+                  data-delete-btn
                   hx-post="/conversations/opts/delete/{{ conv.uuid }}"
                   hx-target="#sidebar-conv-{{ conv.uuid }}"
                   hx-swap="outerHTML"
-                  hx-confirm="Delete this conversation?">
+                  hx-trigger="confirmed">
             Delete
           </button>
         </li>

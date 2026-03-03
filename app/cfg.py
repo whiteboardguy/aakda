@@ -43,6 +43,8 @@ class Settings(BaseSettings):
 
     # OPTS
     opts_autoverify: bool = bool(os.getenv("OPTIONS_AUTOVERIFY", False))
+    opts_delete_after: int = int(os.getenv("OPTIONS_PERMADELETE_WAIT_DAYS", -1))
+
 
     # --- #
 

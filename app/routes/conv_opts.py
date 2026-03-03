@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
@@ -130,6 +131,7 @@ async def delete_conversation(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     conversation.deleted = True
+    conversation.deleted_at = datetime.now(timezone.utc)
     db.commit()
 
     # Empty response — htmx outerHTML swap removes the element from the DOM.
