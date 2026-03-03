@@ -55,7 +55,10 @@
     <div class="sidebar-footer">
       <div class="sidebar-footer-row">
         <div class="sidebar-user">
-          <span class="sidebar-username">Account</span>
+          <span class="sidebar-username"
+                hx-get="/users/fetch/display"
+                hx-trigger="load"
+                hx-swap="innerHTML">Account</span>
         </div>
         <div class="sidebar-footer-actions">
           <!-- Theme toggle -->

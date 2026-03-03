@@ -4,6 +4,9 @@
    Light mode default (:root). Dark mode: [data-theme="dark"].
    ============================================================ */
 
+/* ── Merriweather serif font ── */
+@import url("/static/fonts/merriweather/fonts.css");
+
 /* ── Design tokens — light mode (default) ── */
 :root {
   --ak-sidebar-width:  297px;
@@ -62,10 +65,10 @@
   --ak-secondary:     #6b6b6b;   /* alias for --ak-text-muted */
   --ak-lines:         #d4d4d4;   /* alias for --ak-border */
   --ak-font-mono:     "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --ak-font-serif:    "Merriweather", Georgia, "Times New Roman", serif;
 
   /* Typography */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-               Helvetica, Arial, sans-serif;
+  font-family: var(--ak-font-serif);
   font-size: 20.8px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;

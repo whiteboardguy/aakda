@@ -34,6 +34,7 @@ app.include_router(test.router)
 app.include_router(auth.router)
 app.include_router(conversations.router)
 app.include_router(chat_routes.router)
+app.include_router(users.router)
 
 
 # ---------------------------------------------------------------------------
