@@ -11,29 +11,44 @@ from typing import Callable, Optional
 from ..ai import SYSTEM_PROMPT, call_llm, make_tool_error
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-MAX_RETRIES  = 8
-EXEC_TIMEOUT = 30   # per-subprocess seconds
+MAX_RETRIES = 8
+EXEC_TIMEOUT = 30  # per-subprocess seconds
 
 # Paths
-_RUNNER     = str(Path(__file__).parent / "_runner.py")
-_UTILS_PATH = str(Path(__file__).parent.parent)   # app/utils/
+_RUNNER = str(Path(__file__).parent / "_runner.py")
+_UTILS_PATH = str(Path(__file__).parent.parent)  # app/utils/
 
 # Explicitly resolve the venv Python so the subprocess inherits all installed packages.
 # sys.executable under `uv run` can point to the uv shim rather than the venv interpreter.
 _VENV_PYTHON = Path(__file__).parents[3] / ".venv" / "bin" / "python"
-_PYTHON      = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
+_PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
 
 # Env var prefixes to strip from the child process environment
 _STRIP_PREFIXES = (
-    "LLM_", "JINA_", "SECRET", "DB_", "DATABASE_",
-    "REDIS_", "SECURITY_", "INSTANCE_",
+    "LLM_",
+    "JINA_",
+    "SECRET",
+    "DB_",
+    "DATABASE_",
+    "REDIS_",
+    "SECURITY_",
+    "INSTANCE_",
 )
 
 # ── AST VALIDATION ────────────────────────────────────────────────────────────
-_BLOCKED_CALLS = frozenset({
-    "exec", "eval", "open", "__import__", "compile",
-    "breakpoint", "input", "memoryview",
-})
+_BLOCKED_CALLS = frozenset(
+    {
+        "exec",
+        "eval",
+        "open",
+        "__import__",
+        "compile",
+        "breakpoint",
+        "input",
+        "memoryview",
+    }
+)
+
 
 def validate_ast(code: str) -> Optional[str]:
     """
@@ -73,30 +88,37 @@ def _execute_subprocess(code: str, exec_timeout: int = EXEC_TIMEOUT) -> dict:
     code_file = out_file = None
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", prefix="aakda_code_",
-            encoding="utf-8", delete=False,
+            mode="w",
+            suffix=".py",
+            prefix="aakda_code_",
+            encoding="utf-8",
+            delete=False,
         ) as cf:
             os.chmod(cf.name, 0o600)
             cf.write(code)
             code_file = cf.name
 
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", prefix="aakda_out_",
-            encoding="utf-8", delete=False,
+            mode="w",
+            suffix=".json",
+            prefix="aakda_out_",
+            encoding="utf-8",
+            delete=False,
         ) as of:
             os.chmod(of.name, 0o600)
             out_file = of.name
 
         # Strip all sensitive vars, pass only what the runner needs
         child_env = {
-            k: v for k, v in os.environ.items()
+            k: v
+            for k, v in os.environ.items()
             if not any(k.startswith(p) for p in _STRIP_PREFIXES)
         }
-        child_env["ACFV_CODE_FILE"]  = code_file
-        child_env["ACFV_OUT_FILE"]   = out_file
+        child_env["ACFV_CODE_FILE"] = code_file
+        child_env["ACFV_OUT_FILE"] = out_file
 
         proc = subprocess.run(
-            [_PYTHON, _RUNNER],   # ← was [sys.executable, _RUNNER]
+            [_PYTHON, _RUNNER],  # ← was [sys.executable, _RUNNER]
             capture_output=True,
             text=True,
             timeout=exec_timeout,
@@ -104,7 +126,10 @@ def _execute_subprocess(code: str, exec_timeout: int = EXEC_TIMEOUT) -> dict:
         )
 
         if proc.returncode != 0:
-            error = proc.stderr.strip() or "Subprocess exited with a non-zero code. Something's wrong."
+            error = (
+                proc.stderr.strip()
+                or "Subprocess exited with a non-zero code. Something's wrong."
+            )
             # HACK:
             print(f"[SANDBOX STDERR] {error}")
             return {"success": False, "error": error}
@@ -113,19 +138,28 @@ def _execute_subprocess(code: str, exec_timeout: int = EXEC_TIMEOUT) -> dict:
             result = json.load(f)
 
         if not result.get("plot_html"):
-            return {"success": False, "error": "Output file exists but there's no 'plot_html'."}
+            return {
+                "success": False,
+                "error": "Output file exists but there's no 'plot_html'.",
+            }
 
         return {
-            "success":   True,
+            "success": True,
             "plot_html": result["plot_html"],
             "data_html": result.get("data_html") or "",
-            "sources":   result.get("sources")   or [],
+            "sources": result.get("sources") or [],
         }
 
     except subprocess.TimeoutExpired:
-        return {"success": False, "error": f"Execution timed out after {exec_timeout}s."}
+        return {
+            "success": False,
+            "error": f"Execution timed out after {exec_timeout}s.",
+        }
     except json.JSONDecodeError:
-        return {"success": False, "error": "Runner wrote invalid JSON to the output file."}
+        return {
+            "success": False,
+            "error": "Runner wrote invalid JSON to the output file.",
+        }
     except Exception as e:
         return {"success": False, "error": f"Unexpected error: {e}"}
     finally:
@@ -146,11 +180,11 @@ def _reconstruct_messages(user_messages: list, bot_messages: list) -> list:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     u_sorted = sorted(user_messages, key=lambda m: m["message_index"])
-    b_sorted = sorted(bot_messages,  key=lambda m: m["message_index"])
+    b_sorted = sorted(bot_messages, key=lambda m: m["message_index"])
     b_by_idx = {m["message_index"]: m for m in b_sorted}
 
     for u in u_sorted:
-        idx          = u["message_index"]
+        idx = u["message_index"]
         user_content = u["message"]
 
         if u.get("render_reply") and u.get("render_reply_index") is not None:
@@ -158,8 +192,7 @@ def _reconstruct_messages(user_messages: list, bot_messages: list) -> list:
             if ref and ref.get("render_python"):
                 user_content = (
                     f"[Context: the user is referring to the chart produced by this code:\n"
-                    f"```python\n{ref['render_python']}\n```]\n\n"
-                    + user_content
+                    f"```python\n{ref['render_python']}\n```]\n\n" + user_content
                 )
 
         messages.append({"role": "user", "content": user_content})
@@ -173,46 +206,58 @@ def _reconstruct_messages(user_messages: list, bot_messages: list) -> list:
         if raw_tc:
             try:
                 tools_called = json.loads(raw_tc) if isinstance(raw_tc, str) else raw_tc
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 tools_called = []
 
         if bot.get("is_render") and tools_called:
             tc_list = []
             for i, tc in enumerate(tools_called):
-                name    = tc.get("name", "")
+                name = tc.get("name", "")
                 fake_id = f"rc_{idx}_{i}"
 
                 if name == "execute_python_for_chart":
-                    tc_list.append({
-                        "id":   fake_id,
-                        "type": "function",
-                        "function": {
-                            "name":      "execute_python_for_chart",
-                            "arguments": json.dumps({"code": bot.get("render_python", "")}),
-                        },
-                    })
+                    tc_list.append(
+                        {
+                            "id": fake_id,
+                            "type": "function",
+                            "function": {
+                                "name": "execute_python_for_chart",
+                                "arguments": json.dumps(
+                                    {"code": bot.get("render_python", "")}
+                                ),
+                            },
+                        }
+                    )
                 elif name == "search_web":
-                    tc_list.append({
-                        "id":   fake_id,
-                        "type": "function",
-                        "function": {
-                            "name":      "search_web",
-                            "arguments": json.dumps({"query": tc.get("summary", "")}),
-                        },
-                    })
+                    tc_list.append(
+                        {
+                            "id": fake_id,
+                            "type": "function",
+                            "function": {
+                                "name": "search_web",
+                                "arguments": json.dumps(
+                                    {"query": tc.get("summary", "")}
+                                ),
+                            },
+                        }
+                    )
 
             if tc_list:
-                messages.append({
-                    "role":       "assistant",
-                    "content":    bot.get("message") or "",
-                    "tool_calls": tc_list,
-                })
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": bot.get("message") or "",
+                        "tool_calls": tc_list,
+                    }
+                )
                 for tc_msg, tc_orig in zip(tc_list, tools_called):
-                    messages.append({
-                        "role":         "tool",
-                        "tool_call_id": tc_msg["id"],
-                        "content":      tc_orig.get("response") or "SUCCESS",
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc_msg["id"],
+                            "content": tc_orig.get("response") or "SUCCESS",
+                        }
+                    )
                 continue
 
         messages.append({"role": "assistant", "content": bot.get("message") or ""})
@@ -225,18 +270,19 @@ def _error_dict(message: str, model: str, retries: int = 0) -> dict:
     return {
         "render_plot_html": None,
         "render_html_data": None,
-        "render_python":    None,
-        "message":          message,
-        "model":            model,
-        "sources":          [],
-        "message_retries":  retries,
-        "tools_called":     [],
-        "is_render":        False,
+        "render_python": None,
+        "message": message,
+        "model": model,
+        "sources": [],
+        "message_retries": retries,
+        "tools_called": [],
+        "is_render": False,
     }
 
+
 def _clean_error(error: str) -> str:
-    if "__import__" in error:
-        return "Internal library error during data fetch. Restructure the yf.download() call or try a shorter date range."
+    if "__import__" in error or "is not allowed" in error:
+        return "Import statement detected — remove all import lines. All required libraries (pd, yf, px, go, np, datetime, json) are pre-injected as globals."
     if "429" in error or "Too Many Requests" in error:
         return "The data provider rate-limited this request. Use a shorter date range or fetch less data."
     if "KeyError" in error and "Close" in error:
@@ -277,22 +323,23 @@ def _retry_guidance(attempt: int, error: str) -> str:
             f"Strip everything back to basics."
         )
 
+
 # ── PUBLIC API ────────────────────────────────────────────────────────────────
 def fetch_graph(
-    query:         str,
+    query: str,
     user_messages: list,
-    bot_messages:  list,
-    opt_web:       bool               = False,
-    model:         str                = "gpt-oss-120b",
-    timeout:       int                = 300,
-    on_status:     Optional[Callable] = None,
+    bot_messages: list,
+    opt_web: bool = False,
+    model: str = "gpt-oss-120b",
+    timeout: int = 300,
+    on_status: Optional[Callable] = None,
 ) -> dict:
     def push(text: str):
         if on_status:
             on_status(text)
 
-    deadline   = time.monotonic() + timeout
-    retries    = 0
+    deadline = time.monotonic() + timeout
+    retries = 0
     last_error = ""
     llm_result: Optional[dict] = None
 
@@ -328,16 +375,42 @@ def fetch_graph(
 
         # ── Plain text reply — no chart ────────────────────────────────────
         if llm_result.get("code") is None:
+            if retries < MAX_RETRIES:
+                push(
+                    f"No tool call (attempt {retries + 1}) — prompting LLM to call the tool…"
+                )
+                last_error = "no_tool_call"
+                retries += 1
+                # _tc_id is None so we can't use make_tool_error — append a
+                # user-role correction instead and reset llm_result to force
+                # a fresh call_llm on the next iteration.
+                working_msgs = llm_result["_working_msgs"]
+                working_msgs.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "You must call execute_python_for_chart immediately. "
+                            "Do not respond with plain text. Call the tool now."
+                        ),
+                    }
+                )
+                llm_result = call_llm(
+                    working_msgs,
+                    opt_web=opt_web,
+                    model=model,
+                    on_status=on_status,
+                )
+                continue
             return {
                 "render_plot_html": None,
                 "render_html_data": None,
-                "render_python":    None,
-                "message":          llm_result["message"],
-                "model":            model,
-                "sources":          [],
-                "message_retries":  retries,
-                "tools_called":     llm_result["tools_called"],
-                "is_render":        False,
+                "render_python": None,
+                "message": llm_result["message"],
+                "model": model,
+                "sources": [],
+                "message_retries": retries,
+                "tools_called": llm_result["tools_called"],
+                "is_render": False,
             }
 
         code = llm_result["code"]
@@ -364,13 +437,13 @@ def fetch_graph(
             return {
                 "render_plot_html": exec_result["plot_html"],
                 "render_html_data": exec_result.get("data_html") or "",
-                "render_python":    code,
-                "message":          llm_result["message"],
-                "model":            model,
-                "sources":          exec_result.get("sources") or [],
-                "message_retries":  retries,
-                "tools_called":     llm_result["tools_called"],
-                "is_render":        True,
+                "render_python": code,
+                "message": llm_result["message"],
+                "model": model,
+                "sources": exec_result.get("sources") or [],
+                "message_retries": retries,
+                "tools_called": llm_result["tools_called"],
+                "is_render": True,
             }
 
         push(f"Sandbox error on attempt {retries + 1} — asking LLM to fix…")

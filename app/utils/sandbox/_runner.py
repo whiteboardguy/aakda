@@ -49,6 +49,21 @@ def flatten_yf(df):
     return df
 
 
+# ── Restricted __import__ stub ───────────────────────────────────────────────
+_ALLOWED_IMPORTS = frozenset(
+    {"pandas", "numpy", "plotly", "yfinance", "datetime", "json"}
+)
+
+
+def _restricted_import(name, *args, **kwargs):
+    if name in _ALLOWED_IMPORTS:
+        return __import__(name, *args, **kwargs)
+    raise ImportError(
+        f"Import of '{name}' is not allowed — remove all import statements, "
+        "all required libraries are pre-injected as globals."
+    )
+
+
 # ── Restricted builtins ───────────────────────────────────────────────────────
 _SAFE_BUILTINS = {
     "range": range,
@@ -92,6 +107,7 @@ _SAFE_BUILTINS = {
     "TypeError": TypeError,
     "AttributeError": AttributeError,
     "RuntimeError": RuntimeError,
+    "__import__": _restricted_import,
 }
 
 _SAFE_GLOBALS = {
