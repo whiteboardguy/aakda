@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from ..ai import SYSTEM_PROMPT, call_llm, make_tool_error
+from ..print_utils import printStat
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 MAX_RETRIES = 8
@@ -130,8 +131,7 @@ def _execute_subprocess(code: str, exec_timeout: int = EXEC_TIMEOUT) -> dict:
                 proc.stderr.strip()
                 or "Subprocess exited with a non-zero code. Something's wrong."
             )
-            # HACK:
-            print(f"[SANDBOX STDERR] {error}")
+            printStat("c", f"Sandbox subprocess stderr: {error}")
             return {"success": False, "error": error}
 
         with open(out_file, "r", encoding="utf-8") as f:

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -16,16 +16,20 @@ from .cfg import settings
 from .limiter import limiter
 from .routes import auth, conversations, users
 from .utils import models
-from .utils.database import get_db, engine
+from .utils.database import get_db
+from .utils.print_utils import printStat
 from .utils.purge import run_purge_loop, run_session_purge_loop
 from .utils.sessions import session_is_valid
 from .utils.templating import templates
 
-models.Base.metadata.create_all(bind=engine)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.opts_workers > 1:
+        printStat(
+            "w",
+            "OPTIONS_WORKERS > 1: in-memory task status is not shared across workers. Poll results may be incorrect.",
+        )
     purge_task = asyncio.create_task(run_purge_loop())
     session_purge_task = asyncio.create_task(run_session_purge_loop())
     yield
@@ -38,7 +42,12 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -66,6 +75,18 @@ async def security_headers(request: Request, call_next) -> Response:
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if not settings.DEBUG:
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=63072000; includeSubDomains; preload"
+        )
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plot.ly; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
     return response
 
 
@@ -87,6 +108,11 @@ async def not_found_handler(request: Request, exc: HTTPException):
 @app.exception_handler(500)
 async def server_error_handler(request: Request, exc: Exception):
     return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    return JSONResponse({"status": "ok"})
 
 
 # ---------------------------------------------------------------------------

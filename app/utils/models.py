@@ -29,10 +29,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
     # by the server, post creation
-    if settings.DEBUG is True:
+    if settings.DEBUG:
         printStat("w", "New users are verified automatically (DEBUG mode).")
         verified = mapped_column(Boolean, default=True)
-    elif settings.opts_autoverify is True:
+    elif settings.opts_autoverify:
         printStat(
             "o", "New users are verified automatically (Auto Verify rule is true)."
         )

@@ -80,6 +80,7 @@ class Settings(BaseSettings):
         "yes",
     )
     opts_delete_after: int = _req_int("OPTIONS_PERMADELETE_WAIT_DAYS", default=-1)
+    opts_workers: int = max(1, _req_int("OPTIONS_WORKERS", default=1))
 
     # DEV
     DEBUG: bool = os.getenv("DEBUG", "").lower() in ("1", "true", "yes")

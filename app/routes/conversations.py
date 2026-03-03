@@ -104,7 +104,9 @@ async def _run_job(
         printStat(
             "c", f"Background job conv={conv_uid} idx={message_index} failed: {exc}"
         )
-        task_status.set_error(conv_uid, message_index, str(exc))
+        task_status.set_error(
+            conv_uid, message_index, "An error occurred while processing your request."
+        )
 
     finally:
         # Clear the status entry; also schedule error cleanup in 10 minutes
@@ -249,6 +251,7 @@ async def continue_conversation(
 # GET /conversations/poll/{conv_id}/{message_index}
 # ---------------------------------------------------------------------------
 @router.get("/poll/{conv_id}/{message_index}")
+@limiter.limit("120/minute")
 async def poll_message(
     conv_id: UUID,
     message_index: int,
@@ -296,7 +299,6 @@ async def poll_message(
     bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
     raw_bot = bot_by_index.get(message_index)
     if raw_bot is not None:
-
         # Render the completed message group.
         bot_msg = dict(raw_bot)
         if isinstance(bot_msg.get("sources"), str):
@@ -333,7 +335,10 @@ async def poll_message(
 # GET /conversations/new-form — resets the chat area for a new conversation
 # ---------------------------------------------------------------------------
 @router.get("/new-form")
-async def new_conversation_form(request: Request):
+async def new_conversation_form(
+    request: Request,
+    uid: str = Depends(require_auth),
+):
     """Return an empty chat-area placeholder; JS resets the form action to /conversations/new."""
     return templates.TemplateResponse(
         "partials/new_conv_placeholder.html",

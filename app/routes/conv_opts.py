@@ -12,6 +12,7 @@ from ..utils.database import get_db
 from ..utils.deps import require_auth
 from ..utils.print_utils import printStat
 from ..utils.templating import templates
+from ..limiter import limiter
 
 
 router = APIRouter(prefix="/opts")
@@ -35,6 +36,7 @@ def _build_conv_context(conv: models.Conversation) -> dict:
 
 
 @router.post("/share/{conv_id}")
+@limiter.limit("30/minute")
 async def share_conversation(
     conv_id: UUID,
     request: Request,
@@ -65,6 +67,7 @@ async def share_conversation(
 
 
 @router.post("/unshare/{conv_id}")
+@limiter.limit("30/minute")
 async def unshare_conversation(
     conv_id: UUID,
     request: Request,
@@ -94,6 +97,7 @@ async def unshare_conversation(
 
 
 @router.post("/delete/{conv_id}")
+@limiter.limit("30/minute")
 async def delete_conversation(
     conv_id: UUID,
     request: Request,

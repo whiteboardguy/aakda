@@ -15,7 +15,7 @@ dependencies = [
     "numpy>=2.4.2",
     "pandas>=3.0.1",
     "plotly>=6.5.2",
-    "psycopg2>=2.9.11",
+    "psycopg2-binary>=2.9.11",
     "pwdlib>=0.3.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
@@ -29,3 +29,11 @@ dependencies = [
     "uvicorn[standard]>=0.41.0",
     "yfinance>=1.2.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

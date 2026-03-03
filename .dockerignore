@@ -1,0 +1,13 @@
+.env
+.venv/
+.git/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+tests/
+assets/
+*.md
+.python-version
+.gitlab-ci.yml
+data-scheme.png
