@@ -153,6 +153,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* 1b. Font ------------------------------------------------ */
+  const FONT_CYCLE = ['serif', 'sans', 'mono'];
+  const FONT_LABELS = { serif: 'Serif (Merriweather)', sans: 'Sans-serif', mono: 'Monospace' };
+
+  const savedFont = localStorage.getItem('ak-font') || 'serif';
+  _applyFont(savedFont);
+
+  const fontToggleBtn = document.getElementById('font-toggle');
+  if (fontToggleBtn) {
+    fontToggleBtn.addEventListener('click', () => {
+      const cur  = document.documentElement.getAttribute('data-font') || 'serif';
+      const idx  = FONT_CYCLE.indexOf(cur);
+      const next = FONT_CYCLE[(idx + 1) % FONT_CYCLE.length];
+      _applyFont(next);
+      localStorage.setItem('ak-font', next);
+    });
+  }
+
+  function _applyFont(font) {
+    if (font === 'serif') {
+      document.documentElement.removeAttribute('data-font');
+    } else {
+      document.documentElement.setAttribute('data-font', font);
+    }
+    const btn = document.getElementById('font-toggle');
+    if (btn) btn.setAttribute('title', 'Font: ' + (FONT_LABELS[font] || font));
+  }
+
   /* 2. Sidebar collapse ------------------------------------ */
   const sidebar = document.getElementById('sidebar');
   const savedCollapsed = localStorage.getItem('ak-sidebar') === 'collapsed';
