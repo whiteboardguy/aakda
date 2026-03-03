@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -50,6 +50,25 @@ app.add_middleware(
     path="/",
 )  # ty: ignore[invalid-argument-type]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.aakda_url],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next) -> Response:
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth.router)
@@ -57,8 +76,21 @@ app.include_router(conversations.router)
 app.include_router(users.router)
 
 
+# 404 and 500 pages
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    if request.headers.get("HX-Request"):
+        return HTMLResponse("", status_code=404)
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
+
+@app.exception_handler(500)
+async def server_error_handler(request: Request, exc: Exception):
+    return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+
+
 # ---------------------------------------------------------------------------
-# Auth helper used by page-serving routes
+# Auth helper for page render routes
 # ---------------------------------------------------------------------------
 def _is_authenticated(request: Request, db: Session) -> bool:
     try:
@@ -72,7 +104,7 @@ def _is_authenticated(request: Request, db: Session) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Page routes
+# Page render routes
 # ---------------------------------------------------------------------------
 
 
@@ -93,6 +125,11 @@ async def login_page(request: Request):
 @app.get("/register")
 async def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
+
+
+@app.get("/500")
+async def error_page(request: Request):
+    return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
 
 
 @app.get("/c/{conv_id}")

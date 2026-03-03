@@ -1,10 +1,6 @@
-/* ============================================================
-   main.js — Aakda client-side interactions
-   Only handles what HTMX cannot: theme, sidebar, textarea resize,
-   keyboard shortcuts, markdown rendering, form helpers.
-   ============================================================ */
+/* Client-side interactions: theme, sidebar, textarea, shortcuts, markdown, modals. */
 
-/* ── Markdown setup ── */
+/* Markdown setup */
 if (typeof marked !== 'undefined') {
   marked.setOptions({
     breaks: true,
@@ -12,7 +8,7 @@ if (typeof marked !== 'undefined') {
   });
 }
 
-/* ── Render all unprocessed [data-markdown] elements ── */
+/* Render all unprocessed [data-markdown] elements */
 function renderMarkdown() {
   if (typeof marked === 'undefined') return;
 
@@ -25,7 +21,7 @@ function renderMarkdown() {
     el.setAttribute('data-rendered', 'true');
   });
 
-  /* Apply highlight.js to any new code blocks */
+  /* Apply highlight.js to new code blocks */
   if (typeof hljs !== 'undefined') {
     document.querySelectorAll('pre code:not([data-highlighted])').forEach(block => {
       hljs.highlightElement(block);
@@ -33,7 +29,7 @@ function renderMarkdown() {
   }
 }
 
-/* ── Scroll the messages area to the bottom ── */
+/* Scroll messages area to bottom */
 function scrollToBottom() {
   const area = document.getElementById('messages-scroll');
   if (area) {
@@ -41,11 +37,10 @@ function scrollToBottom() {
   }
 }
 
-/* ── Active sidebar conversation tracking ── */
+/* Track active sidebar conversation */
 let _activeConvId = null;
 
 function _setActiveSidebarItem(convId) {
-  /* Remove active class from all items */
   document.querySelectorAll('.sidebar-item.active').forEach(el => {
     el.classList.remove('active');
   });
@@ -54,7 +49,7 @@ function _setActiveSidebarItem(convId) {
   if (el) el.classList.add('active');
 }
 
-/* ── Update chat-form action to continue a specific conversation ── */
+/* Update chat-form action to continue a specific conversation */
 window.updateFormAction = function(convId) {
   const form = document.getElementById('chat-form');
   if (!form) return;
@@ -64,7 +59,7 @@ window.updateFormAction = function(convId) {
   _setActiveSidebarItem(convId);
 };
 
-/* ── Reset chat-form back to /conversations/new ── */
+/* Reset chat-form back to /conversations/new */
 window.resetFormToNew = function() {
   const form = document.getElementById('chat-form');
   if (!form) return;
@@ -74,7 +69,7 @@ window.resetFormToNew = function() {
   _setActiveSidebarItem(null);
 };
 
-/* ── Toast notification ── */
+/* Show a temporary toast notification */
 window.showToast = function(message, durationMs = 3500) {
   const container = document.getElementById('ak-toast');
   if (!container) return;
@@ -98,7 +93,7 @@ window.showToast = function(message, durationMs = 3500) {
   setTimeout(remove, durationMs);
 };
 
-/* ── Auth page: handle login/register response ── */
+/* Handle login/register htmx response */
 window.handleAuthResponse = function(event, successRedirect) {
   const detail = event.detail;
   if (detail.successful) {
@@ -118,13 +113,7 @@ window.handleAuthResponse = function(event, successRedirect) {
   }
 };
 
-/* ============================================================
-   INLINE DELETE CONFIRMATION
-   Intercepts clicks on [data-delete-btn]: first click arms the
-   button ("Confirm?"), second click fires the htmx request
-   (hx-trigger="confirmed"). Clicking outside or pressing Escape
-   resets any armed buttons back to "Delete".
-   ============================================================ */
+/* Inline delete confirmation: first click arms, second fires htmx "confirmed". */
 
 function resetDeleteButtons() {
   document.querySelectorAll('[data-delete-btn][data-armed]').forEach(btn => {
@@ -140,23 +129,17 @@ document.addEventListener('click', function(e) {
     return;
   }
   if (btn.hasAttribute('data-armed')) {
-    /* Second click — fire the htmx request */
     htmx.trigger(btn, 'confirmed');
   } else {
-    /* First click — arm: reset others, then arm this one */
     resetDeleteButtons();
     btn.setAttribute('data-armed', '');
     btn.textContent = 'Confirm?';
   }
 });
 
-/* ============================================================
-   DOM READY
-   ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* 1. Theme ------------------------------------------------ */
-  /* Migrate legacy 'night' value to 'dark' */
+  /* Theme — migrate legacy value, apply saved, wire toggle */
   if (localStorage.getItem('ak-theme') === 'night') {
     localStorage.setItem('ak-theme', 'dark');
   }
@@ -179,15 +162,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const icon = document.getElementById('theme-icon');
     if (!icon) return;
     if (theme === 'light') {
-      /* moon icon */
+      /* Moon icon for dark mode toggle */
       icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
     } else {
-      /* sun icon */
+      /* Sun icon for light mode toggle */
       icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
     }
   }
 
-  /* 1b. Font ------------------------------------------------ */
+  /* Font — cycle serif → sans → mono, persist to localStorage */
   const FONT_CYCLE = ['serif', 'sans', 'mono'];
   const FONT_LABELS = { serif: 'Serif (Merriweather)', sans: 'Sans-serif', mono: 'Monospace' };
 
@@ -215,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn) btn.setAttribute('title', 'Font: ' + (FONT_LABELS[font] || font));
   }
 
-  /* 2. Sidebar collapse ------------------------------------ */
+  /* Sidebar — restore collapsed state from localStorage */
   const sidebar = document.getElementById('sidebar');
   const savedCollapsed = localStorage.getItem('ak-sidebar') === 'collapsed';
   if (sidebar && savedCollapsed) {
@@ -229,16 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
       sidebar.classList.contains('collapsed') ? 'collapsed' : 'open');
   };
 
-  /* 2b. Sidebar dropdown — position fixed to escape overflow clipping ------- */
-  /* Uses mousedown so position is set before :focus-within shows the menu.   */
+  /* Sidebar dropdown — position:fixed to escape overflow clipping */
   document.addEventListener('mousedown', e => {
     const btn = e.target.closest('.sidebar-item-menu-btn');
     if (!btn) return;
     const menu = btn.closest('.dropdown')?.querySelector('.dropdown-content');
     if (!menu) return;
     const rect = btn.getBoundingClientRect();
-    // Prefer opening below; if too close to bottom, open above
-    const menuHeight = 96; // approx height of 2-item menu
+    const menuHeight = 96;
     const spaceBelow = window.innerHeight - rect.bottom;
     if (spaceBelow >= menuHeight) {
       menu.style.top  = (rect.bottom + 4) + 'px';
@@ -248,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     menu.style.left = rect.left + 'px';
   });
 
-  /* 3. Textarea auto-resize -------------------------------- */
+  /* Textarea auto-resize on input */
   function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 200) + 'px';
@@ -260,14 +241,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* 4. Ctrl+K / Cmd+K — focus input ---------------------- */
+  /* Ctrl+K / Cmd+K — focus chat input */
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
       const input = document.getElementById('query-input');
       if (input) { input.focus(); input.select(); }
     }
-    /* Esc — reset any pending delete confirmation, then blur input */
+    /* Esc — cancel pending delete, blur input */
     if (e.key === 'Escape') {
       closeDeleteAllModal();
       resetDeleteButtons();
@@ -275,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* 5. Enter to submit (Shift+Enter = newline) ------------ */
+  /* Enter submits form; Shift+Enter inserts newline */
   document.body.addEventListener('keydown', e => {
     if (e.target.id === 'query-input' && e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -284,19 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* 6. Initial markdown render + scroll ------------------- */
+  /* Initial render and scroll on page load */
   renderMarkdown();
   scrollToBottom();
 });
 
-/* ============================================================
-   DELETE-ALL CONVERSATIONS MODAL
-   ============================================================ */
+/* Delete-all modal */
 
 window.openDeleteAllModal = function() {
   const modal = document.getElementById('delete-all-modal');
   if (!modal) return;
-  /* Reset to initial state */
   const execBtn = document.getElementById('delete-all-execute');
   if (execBtn) { execBtn.textContent = 'Delete'; execBtn.removeAttribute('data-armed'); execBtn.disabled = false; }
   const cancelBtn = document.getElementById('delete-all-cancel');
@@ -311,12 +289,10 @@ window.closeDeleteAllModal = function() {
 
 window.handleDeleteAllConfirm = function(btn) {
   if (!btn.hasAttribute('data-armed')) {
-    /* First click — arm */
     btn.setAttribute('data-armed', '');
     btn.textContent = 'Confirm?';
     return;
   }
-  /* Second click — execute */
   btn.disabled = true;
   const cancelBtn = document.getElementById('delete-all-cancel');
   if (cancelBtn) cancelBtn.disabled = true;
@@ -332,7 +308,7 @@ window.handleDeleteAllConfirm = function(btn) {
   });
 };
 
-/* Close on backdrop click */
+/* Close modal on backdrop click */
 document.addEventListener('click', function(e) {
   const modal = document.getElementById('delete-all-modal');
   if (modal && modal.classList.contains('open') && e.target === modal) {
@@ -340,26 +316,22 @@ document.addEventListener('click', function(e) {
   }
 });
 
-/* ============================================================
-   HTMX EVENT HOOKS
-   ============================================================ */
+/* HTMX hooks */
 
-/* After any HTMX swap settles: render markdown + scroll + restore active sidebar */
+/* After any swap: render markdown, scroll, restore active sidebar item */
 document.body.addEventListener('htmx:afterSettle', (evt) => {
   renderMarkdown();
   scrollToBottom();
-  /* If the sidebar list just reloaded, re-apply the active item indicator */
   const target = evt.detail && evt.detail.target;
   if (target && target.id === 'sidebar-history-list') {
     _setActiveSidebarItem(_activeConvId);
   }
 });
 
-/* After HTMX request on #chat-form: reset textarea */
+/* After chat-form request: reset textarea; handle share link header */
 document.body.addEventListener('htmx:afterRequest', evt => {
   const elt = evt.detail.elt;
 
-  /* Reset form after successful message submission */
   if (elt && elt.id === 'chat-form' && evt.detail.successful) {
     const textarea = document.getElementById('query-input');
     if (textarea) {
@@ -369,7 +341,6 @@ document.body.addEventListener('htmx:afterRequest', evt => {
     }
   }
 
-  /* Share conversation — copy link + show toast */
   if (!evt.detail.successful) return;
   const shareLink = evt.detail.xhr.getResponseHeader('X-Share-Link');
   if (!shareLink) return;
@@ -378,7 +349,7 @@ document.body.addEventListener('htmx:afterRequest', evt => {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(url).then(notify).catch(notify);
   } else {
-    /* Non-HTTPS fallback: still show the toast even if clipboard is unavailable */
+    /* Non-HTTPS fallback: execCommand copy */
     try {
       const ta = document.createElement('textarea');
       ta.value = url;
@@ -392,7 +363,7 @@ document.body.addEventListener('htmx:afterRequest', evt => {
   }
 });
 
-/* Web search option toggle */
+/* Web search toggle */
 window.toggleWebSearch = function(btn) {
   btn.classList.toggle('active');
   const input = document.getElementById('opt-web-input');
@@ -401,7 +372,7 @@ window.toggleWebSearch = function(btn) {
   }
 };
 
-/* ── Password visibility toggle (auth pages) ── */
+/* Password visibility toggle on auth pages */
 window.toggleAuthPassword = function(inputId, btn) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -410,23 +381,24 @@ window.toggleAuthPassword = function(inputId, btn) {
   btn.classList.toggle('revealed', isHidden);
   btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 };
+
+/* Resize inline chart iframes from postMessage */
 window.addEventListener('message', function(e) {
   if (e.origin !== window.location.origin) return;
-  if (!e.data || e.data.type !== 'ak-chart-resize') return;
-  const iframes = document.querySelectorAll('.chart-iframe');
+  if (!e.data || (e.data.type !== 'ak-chart-resize' && e.data.type !== 'ak-data-resize')) return;
+  const selector = e.data.type === 'ak-chart-resize' ? '.chart-iframe' : '.data-iframe';
+  const iframes = document.querySelectorAll(selector);
   for (const iframe of iframes) {
     try {
       if (iframe.contentWindow === e.source) {
-        iframe.style.height = e.data.height + 'px';
+        iframe.style.height = Math.min(e.data.height, 390) + 'px';
         break;
       }
     } catch (_) {}
   }
 });
 
-/* ============================================================
-   CHART MODAL
-   ============================================================ */
+/* Chart modal */
 
 window.expandChart = function(btn) {
   const container = btn.closest('.chart-container');
@@ -439,18 +411,15 @@ window.expandChart = function(btn) {
   const loader     = document.getElementById('chart-modal-loader');
   if (!modal || !modalFrame) return;
 
-  /* If already open, clear previous content first */
   if (modal.classList.contains('open')) {
     modalFrame.srcdoc = '';
     modalFrame.classList.remove('loaded');
   }
 
-  /* Reset loader to visible */
   if (loader) loader.classList.remove('hidden');
   modalFrame.classList.remove('loaded');
 
-  /* Build srcdoc: override Plotly's fixed height, then fire resize so it
-     re-lays out to fill 100vh. Two timeouts cover sync and async init. */
+  /* Inject styles so Plotly fills the modal; dispatch resize after load */
   const src = inlineIframe.srcdoc || '';
   const fillStyle = '<style>' +
     'html,body{margin:0;padding:0;height:100%!important;overflow:hidden!important}' +
@@ -465,15 +434,13 @@ window.expandChart = function(btn) {
     : fillStyle + src;
   modalFrame.srcdoc = injected;
 
-  /* Open backdrop + panel immediately */
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   history.pushState({ chartModal: true }, '');
 
-  /* Once iframe has loaded and Plotly has re-rendered, fade chart in */
+  /* Fade in chart after Plotly re-renders (200 ms resize + one paint cycle) */
   modalFrame.addEventListener('load', function onLoad() {
     modalFrame.removeEventListener('load', onLoad);
-    /* Wait for the 200 ms resize + one paint cycle */
     setTimeout(function() {
       if (loader) loader.classList.add('hidden');
       modalFrame.classList.add('loaded');
@@ -486,12 +453,10 @@ window.closeChartModal = function() {
   const modalFrame = document.getElementById('chart-modal-iframe');
   if (!modal || !modal.classList.contains('open')) return;
 
-  /* Animate out */
   modal.classList.remove('open');
   document.body.style.overflow = '';
 
-  /* Clear srcdoc only after the CSS transition finishes (300 ms panel + small buffer)
-     so there's no flash of blank content during the close animation. */
+  /* Clear srcdoc after CSS transition to avoid flash of blank content */
   setTimeout(function() {
     if (modalFrame) {
       modalFrame.srcdoc = '';
@@ -502,16 +467,15 @@ window.closeChartModal = function() {
   }, 320);
 };
 
-/* Backdrop click — called by onclick on the overlay element in base.html */
+/* Close modal only when clicking the backdrop, not the inner panel */
 window.handleChartModalBackdropClick = function(e) {
-  /* Only close when the click target is the backdrop itself, not the inner panel */
   const modal = document.getElementById('chart-modal');
   if (modal && e.target === modal) {
     history.back();
   }
 };
 
-/* Escape key — close modal (takes priority over the existing blur-on-Escape handler) */
+/* Escape key closes chart modal (capture phase, before blur handler) */
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     const modal = document.getElementById('chart-modal');
@@ -520,9 +484,9 @@ document.addEventListener('keydown', function(e) {
       history.back();
     }
   }
-}, true /* capture phase — runs before the existing keydown listener */);
+}, true);
 
-/* Browser back button — close modal instead of navigating away */
+/* Browser back button closes modal instead of navigating away */
 window.addEventListener('popstate', function(e) {
   const modal = document.getElementById('chart-modal');
   if (modal && modal.classList.contains('open')) {

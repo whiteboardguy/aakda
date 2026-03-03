@@ -73,14 +73,16 @@ class Settings(BaseSettings):
     aakda_url: str = _req("INSTANCE_URL")
     aakda_host: str = _req("INSTANCE_HOST")
     aakda_port: int = _req_int("INSTANCE_PORT", default=5000)
-    aakda_version: str = _req("INSTANCE_VER")
-
     # OPTS
-    opts_autoverify: bool = bool(os.getenv("OPTIONS_AUTOVERIFY", False))
+    opts_autoverify: bool = os.getenv("OPTIONS_AUTOVERIFY", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     opts_delete_after: int = _req_int("OPTIONS_PERMADELETE_WAIT_DAYS", default=-1)
 
     # DEV
-    DEBUG: bool = bool(os.getenv("DEBUG", False))
+    DEBUG: bool = os.getenv("DEBUG", "").lower() in ("1", "true", "yes")
 
 
 try:

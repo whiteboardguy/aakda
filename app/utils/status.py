@@ -2,7 +2,6 @@
 status.py — lightweight in-memory status tracker for background AI tasks.
 
 Key format: "{conv_id}:{message_index}"
-Replaces the asyncio.Queue job registry in jobs.py.
 """
 
 from typing import Optional

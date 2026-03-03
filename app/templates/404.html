@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}404 — Aakda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/login.css" />
+<style>
+  @keyframes fly-up {
+    from { transform: translateY(0);      opacity: 0.55; }
+    to   { transform: translateY(-100%);  opacity: 0; }
+  }
+  @keyframes jerk {
+    0%   { transform: translateY(0); }
+    18%  { transform: translateY(-22px); }
+    100% { transform: translateY(0); }
+  }
+  .bait-wrap {
+    position: fixed;
+    top: 0;
+    right: 6rem;
+    width: 220px;
+    cursor: pointer;
+    animation: jerk 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  }
+  .bait-wrap.leaving {
+    animation: fly-up 0.45s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+    pointer-events: none;
+  }
+  .bait-label {
+    display: block;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    position: relative;
+    z-index: 10;
+    margin-top: 4px;
+  }
+  .bait-svg {
+    display: block;
+    width: 220px;
+    height: 220px;
+    opacity: 0.55;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bait-wrap"
+  onmouseenter="this.querySelector('.bait-label').textContent='hah! caught ya..'; this.classList.add('leaving'); this.addEventListener('animationend', () => window.location.href='/', {once:true})">
+  <svg class="bait-svg" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M236.422 156.236C234.076 172.066 232.393 188.506 234.788 204.466C238.823 231.369 257.513 255.894 261.371 282.892C268.461 332.527 236.422 405.585 177.566 371.227L176.227 370.205" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M157.023 347.105C140.692 324.411 152.915 264.28 191.467 278.855" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M191.162 279.344C177.543 290.844 168.988 306.192 172.748 318.78" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M205.994 341.644C216.787 341.099 228.511 336.405 232.334 325.449C247.81 279.023 193.645 235.505 198.819 188.935C201.321 166.418 213.21 141.853 236.716 154.466" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M222 14C220.278 66.5596 219 119.42 219 172" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M306.09 298.945C301.526 284.644 280.455 275.827 265.957 279.452" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M232.131 314.998C199.911 327.887 191.271 367.301 157.132 384.371C142.701 391.587 78.9436 382.382 95.8213 365.505C102.291 359.034 125.597 364.869 153.585 350.545C181.573 336.221 183.971 305.252 225.825 288.052" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M264.238 310.45C281.74 314.039 306.665 322.58 306.665 304.105" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+  <span class="bait-label">hover me</span>
+</div>
+
+<div class="auth-page">
+  <div style="display:flex;align-items:center;gap:3rem;max-width:680px;width:100%;padding:2rem;">
+
+    <!-- Sadge sitting illustration -->
+    <svg style="flex-shrink:0;width:220px;height:220px;opacity:0.55;" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M177.818 76.0347C193.128 62.879 219.565 56.3475 239.677 64.7699C304.609 91.9587 269.1 183.452 204.028 174.369C160.167 168.248 162.583 84.1728 196.691 69.8894" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M142.592 149C111.564 182.552 91.4488 286.487 107.863 329.195C109.631 333.784 114.081 334.831 117.45 331.31C155.592 308 201.533 267.999 236.81 234.342C238.48 232.748 240.596 232.585 242.747 232.858C243.34 233.617 243.261 234.425 243.183 235.222C241.916 248 241.311 272.377 240.996 285.219C240.708 296.882 239.477 308.533 239.564 320.225C239.585 323.115 239.284 329.44 239.564 332.31C239.78 334.509 244.215 335.724 243.183 338.048" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M142.71 148.845C142.007 152.51 148.963 167.717 151.144 170.81C169.028 196.155 189.4 232.596 223.701 236.643C226.813 237.01 229.933 235.319 232.977 236.992C233.683 237.382 234.488 236.478 235.107 235.976C237.021 234.424 238.895 232.819 240.285 230.783C241.588 228.877 242.709 226.899 245.782 227.905C248.761 228.883 250.756 230.562 250.968 233.665C251.089 235.434 251.085 237.181 251.929 238.814C267.165 268.244 280.722 296.267 291.172 327.626C292.39 331.283 294.472 333.263 298.883 332.765" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <!-- Text content -->
+    <div style="text-align:center;">
+      <p style="font-size:3rem;font-weight:600;color:var(--ak-text-dim);line-height:1;">404</p>
+      <p style="margin-top:0.75rem;color:var(--ak-text-muted);font-size:0.95rem;">That page doesn't exist.</p>
+      <a href="/" style="display:inline-block;margin-top:1.5rem;color:var(--ak-accent);text-decoration:underline;text-underline-offset:3px;font-size:0.9rem;">Go home</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

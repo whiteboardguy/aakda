@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}500 — Aakda{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/login.css" />
+<style>
+  @keyframes fly-up {
+    from { transform: translateY(0);     opacity: 0.55; }
+    to   { transform: translateY(-100%); opacity: 0; }
+  }
+  @keyframes jerk {
+    0%   { transform: translateY(0); }
+    18%  { transform: translateY(-22px); }
+    100% { transform: translateY(0); }
+  }
+  .bait-wrap {
+    position: fixed;
+    top: 0;
+    left: 6rem;
+    width: 220px;
+    cursor: pointer;
+    animation: jerk 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  }
+  .bait-wrap.leaving {
+    animation: fly-up 0.45s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+    pointer-events: none;
+  }
+  .bait-label {
+    display: block;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    position: relative;
+    z-index: 10;
+    margin-top: 4px;
+  }
+  .bait-svg {
+    display: block;
+    width: 220px;
+    height: 220px;
+    opacity: 0.55;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bait-wrap"
+  onmouseenter="this.querySelector('.bait-label').textContent='hah! caught ya..'; this.classList.add('leaving'); this.addEventListener('animationend', () => window.location.href='/', {once:true})">
+  <svg class="bait-svg" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M236.422 156.236C234.076 172.066 232.393 188.506 234.788 204.466C238.823 231.369 257.513 255.894 261.371 282.892C268.461 332.527 236.422 405.585 177.566 371.227L176.227 370.205" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M157.023 347.105C140.692 324.411 152.915 264.28 191.467 278.855" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M191.162 279.344C177.543 290.844 168.988 306.192 172.748 318.78" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M205.994 341.644C216.787 341.099 228.511 336.405 232.334 325.449C247.81 279.023 193.645 235.505 198.819 188.935C201.321 166.418 213.21 141.853 236.716 154.466" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M222 14C220.278 66.5596 219 119.42 219 172" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M306.09 298.945C301.526 284.644 280.455 275.827 265.957 279.452" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M232.131 314.998C199.911 327.887 191.271 367.301 157.132 384.371C142.701 391.587 78.9436 382.382 95.8213 365.505C102.291 359.034 125.597 364.869 153.585 350.545C181.573 336.221 183.971 305.252 225.825 288.052" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M264.238 310.45C281.74 314.039 306.665 322.58 306.665 304.105" stroke="currentColor" stroke-opacity="0.5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span class="bait-label">hover me</span>
+</div>
+
+<div class="auth-page">
+  <div style="display:flex;align-items:center;gap:3rem;max-width:680px;width:100%;padding:2rem;">
+
+    <!-- Text content -->
+    <div style="text-align:center;">
+      <p style="font-size:3rem;font-weight:600;color:var(--ak-text-dim);line-height:1;">500</p>
+      <p style="margin-top:0.75rem;color:var(--ak-text-muted);font-size:0.95rem;">Something went wrong on our end.</p>
+      <a href="/" style="display:inline-block;margin-top:1.5rem;color:var(--ak-accent);text-decoration:underline;text-underline-offset:3px;font-size:0.9rem;">Go home</a>
+    </div>
+
+    <!-- Tornado thought thing -->
+    <svg style="flex-shrink:0;width:220px;height:220px;opacity:0.55;" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M79.261 353.613C68.9515 341.593 68.2915 335.583 77.2811 335.583C90.7654 335.583 124.681 332.455 126.907 322.56C129.134 312.665 126.99 301.388 114.953 297.728C102.917 294.068 97.7712 296.205 95.7654 299.587C93.7597 302.969 95.5598 310.404 113.907 310.404C132.255 310.404 146.29 300.545 146.29 293.325C146.29 286.105 136.526 265.853 117.48 261.103C98.4337 256.353 91.9035 261.103 91.9035 268.772C91.9035 276.441 136.616 288.662 152.529 283.695C168.441 278.728 205.524 259.728 175.907 230.728C146.29 201.728 117.712 202.445 113.907 216.587C110.103 230.728 157.737 255.608 189.421 255.608C221.105 255.608 247.907 252.49 251.907 236.609C255.907 220.728 240.872 187.31 208.39 169.019C175.907 150.728 114.245 125.754 110.103 155.193C105.961 184.632 148.771 210.606 175.907 213.728C203.044 216.85 247.798 220.728 273.907 190.263C286.742 173.819 279.5 150.5 243.907 126.603C196.172 98.4009 143.707 76.0035 128.807 104.539C113.907 133.074 174.224 176.193 189.421 183.228C204.618 190.263 278 225.5 318.554 196.728C347 174.5 312.666 117.513 273.907 91.0191C235.148 64.5254 155.91 29.8526 131.909 56.6829C123.908 64.8914 123.908 72.5068 131.909 79.5289" stroke="currentColor" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+  </div>
+</div>
+{% endblock %}
+

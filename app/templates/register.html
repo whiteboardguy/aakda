@@ -10,12 +10,12 @@
 <div class="auth-page">
   <div class="auth-container register-container">
 
-    <!-- Brand -->
+    <!-- Aakda -->
     <div class="auth-brand">
       <h1 class="auth-brand-name">Aakda</h1>
     </div>
 
-    <!-- Error slot -->
+    <!-- Error notify area -->
     <div id="auth-error" class="auth-error" role="alert">
       <span id="auth-error-text"></span>
     </div>
@@ -33,6 +33,7 @@
                id="display_name"
                name="display_name"
                placeholder="Your Name"
+               maxlength="64"
                required />
       </div>
 
@@ -44,6 +45,7 @@
                name="username"
                placeholder="your_username"
                autocomplete="username"
+               maxlength="32"
                required />
       </div>
 
@@ -55,6 +57,7 @@
                name="email"
                placeholder="you@example.com"
                autocomplete="email"
+               maxlength="254"
                required />
       </div>
 
@@ -67,6 +70,8 @@
                  name="password"
                  placeholder="••••••••"
                  autocomplete="new-password"
+                 minlength="8"
+                 maxlength="128"
                  required />
           <button type="button" class="auth-pw-toggle" aria-label="Toggle password visibility" onclick="toggleAuthPassword('password', this)">
             <svg class="pw-icon-show" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from fastapi.templating import Jinja2Templates
-from fasthx.jinja import Jinja
 
 
 def _timeago(dt: datetime) -> str:
@@ -40,5 +39,3 @@ def _timeago(dt: datetime) -> str:
 
 templates = Jinja2Templates(directory="app/templates")
 templates.env.filters["timeago"] = _timeago
-
-jinja = Jinja(templates)

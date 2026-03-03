@@ -4,17 +4,17 @@
             conv (optional) — present only on new conversations:
               { uuid, title }
 
-   The outer div is the htmx polling element. Every 1 s it GETs
+   The outer div is the htmx polling element. Every 1s it polls for GET
    /conversations/poll/{conv_id}/{message_index} with
    hx-swap="outerHTML", so:
-     • Not done → server returns this same template (updated status)
-                  → polling continues
-     • Done      → server returns message_group.html (no poll trigger)
-                  → this div is replaced, polling stops
-     • Error     → server returns error_bubble.html, polling stops
+     - Not done -> server returns this same template (updated status)
+                  -> polling continues
+     - Done      -> server returns message_group.html (no poll trigger)
+                  -> this div is replaced, polling stops
+     - Error     -> server returns error_bubble.html, polling stops
    ============================================================ #}
 
-{# ── OOB sidebar insert — only on new conversations ── #}
+{# OOB sidebar insert for new convos #}
 {% if conv %}
 <li id="sidebar-conv-{{ conv.uuid }}"
     class="sidebar-item active"
@@ -65,13 +65,13 @@
      hx-swap="innerHTML"
      {% if conv %}hx-on:htmx:load="window.updateFormAction('{{ conv.uuid }}')"{% endif %}>
 
-  {# ── User message preview ── #}
+  {# User message preview #}
   <div class="user-message-wrapper">
     <span class="user-label">You</span>
     <div class="user-bubble">{{ query }}</div>
   </div>
 
-  {# ── AI loading row ── #}
+  {# AI loading row #}
   <div class="ai-loading-row">
     <div class="ai-header">
       <span class="ai-label">Aakda</span>

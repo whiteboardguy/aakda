@@ -11,6 +11,7 @@ Exit codes:
     0 — success, result JSON written to ACFV_OUT_FILE
     1 — failure, error message written to stderr
 """
+
 import contextlib
 import io
 import json
@@ -18,8 +19,8 @@ import os
 import sys
 
 # ── Resolve env vars ──────────────────────────────────────────────────────────
-code_file  = os.environ.get("ACFV_CODE_FILE")
-out_file   = os.environ.get("ACFV_OUT_FILE")
+code_file = os.environ.get("ACFV_CODE_FILE")
+out_file = os.environ.get("ACFV_OUT_FILE")
 utils_path = os.environ.get("ACFV_UTILS_PATH")
 
 if not (code_file and out_file):
@@ -40,45 +41,71 @@ except ImportError as e:
     sys.stderr.write(f"Library import failed: {e}\n")
     sys.exit(1)
 
+
 # ── flatten_yf defined inline — no external import needed ─────────────────────
 def flatten_yf(df):
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = [col[0] for col in df.columns]
     return df
 
+
 # ── Restricted builtins ───────────────────────────────────────────────────────
 _SAFE_BUILTINS = {
-    "range": range, "len": len, "min": min, "max": max,
-    "sum": sum, "abs": abs, "round": round,
-    "int": int, "float": float, "str": str, "bool": bool,
-    "list": list, "dict": dict, "tuple": tuple, "set": set,
-    "print": print, "True": True, "False": False, "None": None,
-    "enumerate": enumerate, "zip": zip, "sorted": sorted,
-    "any": any, "all": all, "map": map, "filter": filter,
-    "reversed": reversed, "next": next, "iter": iter,
-    "isinstance": isinstance, "type": type,
-    "hasattr": hasattr, "getattr": getattr, "vars": vars,
-    "Exception": Exception, "ValueError": ValueError,
-    "KeyError": KeyError, "IndexError": IndexError,
-    "TypeError": TypeError, "AttributeError": AttributeError,
+    "range": range,
+    "len": len,
+    "min": min,
+    "max": max,
+    "sum": sum,
+    "abs": abs,
+    "round": round,
+    "int": int,
+    "float": float,
+    "str": str,
+    "bool": bool,
+    "list": list,
+    "dict": dict,
+    "tuple": tuple,
+    "set": set,
+    "print": print,
+    "True": True,
+    "False": False,
+    "None": None,
+    "enumerate": enumerate,
+    "zip": zip,
+    "sorted": sorted,
+    "any": any,
+    "all": all,
+    "map": map,
+    "filter": filter,
+    "reversed": reversed,
+    "next": next,
+    "iter": iter,
+    "isinstance": isinstance,
+    "type": type,
+    "hasattr": hasattr,
+    "getattr": getattr,
+    "vars": vars,
+    "Exception": Exception,
+    "ValueError": ValueError,
+    "KeyError": KeyError,
+    "IndexError": IndexError,
+    "TypeError": TypeError,
+    "AttributeError": AttributeError,
     "RuntimeError": RuntimeError,
-
-    # HACK:
-    "__import__": __import__,
 }
 
 _SAFE_GLOBALS = {
     "__builtins__": _SAFE_BUILTINS,
-    "pd":           pd,
-    "yf":           yf,
-    "px":           px,
-    "go":           go,
-    "np":           np,
-    "datetime":     datetime,
-    "timedelta":    timedelta,
-    "flatten_yf":   flatten_yf,
-    "json":         _json,
-    "datetime":  _dt_module,
+    "pd": pd,
+    "yf": yf,
+    "px": px,
+    "go": go,
+    "np": np,
+    "datetime": datetime,
+    "timedelta": timedelta,
+    "flatten_yf": flatten_yf,
+    "json": _json,
+    "datetime": _dt_module,
     "timedelta": _dt_module.timedelta,
 }
 
@@ -91,8 +118,8 @@ except OSError as e:
     sys.exit(1)
 
 # ── Execute ───────────────────────────────────────────────────────────────────
-local_vars:    dict          = {}
-stdout_buffer: io.StringIO   = io.StringIO()
+local_vars: dict = {}
+stdout_buffer: io.StringIO = io.StringIO()
 
 try:
     with contextlib.redirect_stdout(stdout_buffer):
@@ -124,7 +151,7 @@ if "SUCCESS: plot ready" not in captured:
 result = {
     "plot_html": plot_html,
     "data_html": local_vars.get("data_html") or "",
-    "sources":   local_vars.get("sources")   or [],
+    "sources": local_vars.get("sources") or [],
 }
 
 try:

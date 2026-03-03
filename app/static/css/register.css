@@ -1,8 +1,0 @@
-/* ============================================================
-   register.css — registration page (auth styles from login.css)
-   ============================================================ */
-@import url('/static/css/login.css');
-
-.auth-container.register-container {
-  max-width: 400px;
-}

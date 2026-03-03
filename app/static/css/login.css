@@ -1,8 +1,3 @@
-/* ============================================================
-   login.css — authentication pages (login + register)
-   Monospace, centered, editorial. No card, no shadow, no radius.
-   ============================================================ */
-
 html, body {
   background: var(--ak-bg);
   margin: 0;
@@ -30,7 +25,7 @@ html, body {
   text-align: center;
 }
 
-/* ── Brand ── */
+/* Brand */
 .auth-brand {
   display: flex;
   flex-direction: column;
@@ -47,7 +42,7 @@ html, body {
   margin: 0;
 }
 
-/* Accent rule below brand */
+/* Rule */
 .auth-brand::after {
   content: '';
   display: block;
@@ -57,7 +52,7 @@ html, body {
   border-radius: 1px;
 }
 
-/* ── Error alert ── */
+/* Error */
 .auth-error {
   display: none;
   width: 100%;
@@ -72,7 +67,7 @@ html, body {
 }
 .auth-error.visible { display: block; }
 
-/* ── Form ── */
+/* Form */
 .auth-form {
   width: 100%;
   display: flex;
@@ -88,7 +83,7 @@ html, body {
   width: 100%;
 }
 
-/* Uppercase mono label */
+/* Label */
 .auth-label {
   font-family: var(--ak-font-mono);
   font-size: 0.65rem;
@@ -99,7 +94,7 @@ html, body {
   align-self: flex-start;
 }
 
-/* Bottom-border only input — centered mono text */
+/* Input */
 .auth-input {
   width: 100%;
   padding: 0.5rem 0;
@@ -124,7 +119,7 @@ html, body {
   border-bottom-width: 2px;
 }
 
-/* Submit — full-width, accent-filled */
+/* Submit */
 .auth-submit-btn {
   width: 100%;
   padding: 0.7rem;
@@ -145,7 +140,7 @@ html, body {
 .auth-submit-btn:active { opacity: 0.85; }
 .auth-submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* Footer link */
+/* Footer */
 .auth-footer {
   font-family: var(--ak-font-mono);
   font-size: 0.75rem;
@@ -161,7 +156,7 @@ html, body {
   border-bottom-color: var(--ak-accent);
 }
 
-/* ── Password visibility toggle ── */
+/* Toggle */
 .auth-password-wrap {
   position: relative;
   width: 100%;
@@ -199,10 +194,10 @@ html, body {
   display: block;
 }
 
-/* show eye-open by default; hide eye-closed */
+/* Icons */
 .auth-pw-toggle .pw-icon-show { display: block; }
 .auth-pw-toggle .pw-icon-hide { display: none; }
 
-/* when password is revealed, swap icons */
+/* Revealed */
 .auth-pw-toggle.revealed .pw-icon-show { display: none; }
 .auth-pw-toggle.revealed .pw-icon-hide { display: block; }

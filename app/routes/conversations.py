@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy import not_, select
 from sqlalchemy.orm import Session, attributes
@@ -49,7 +49,7 @@ def _build_message_pairs(conversation) -> list:
 
 # ---------------------------------------------------------------------------
 # Background job: runs fetch_graph off the event loop, persists result,
-# updates in-memory status dict so the poll endpoint can serve progress.
+# and updates the status dict (in memory, idk redis). So poll endpoint can show progress.
 # ---------------------------------------------------------------------------
 async def _run_job(
     conv_uid: str,
@@ -118,6 +118,7 @@ async def _run_job(
 # POST /conversations/new
 # ---------------------------------------------------------------------------
 @router.post("/new")
+@limiter.limit("10/minute")
 async def create_conversation(
     request: Request,
     user_input: Annotated[schemas.Conversation_Create_Request, Form()],
@@ -176,6 +177,7 @@ async def create_conversation(
 # POST /conversations/continue/{conv_id}
 # ---------------------------------------------------------------------------
 @router.post("/continue/{conv_id}")
+@limiter.limit("10/minute")
 async def continue_conversation(
     conv_id: UUID,
     request: Request,
@@ -211,6 +213,7 @@ async def continue_conversation(
     db.commit()
 
     # Snapshot after appending the new user message.
+    # Makes sure accidental db changes don't throw llm off.
     snapshot_user = list(conversation.user_messages)
     snapshot_bot = list(conversation.bot_messages)
 
@@ -272,12 +275,12 @@ async def poll_message(
             },
         )
 
-    # If the job is still running the status key is present — skip the DB entirely.
+    # If the job is still running the status key is present, skip the DB entirely.
     current_status = task_status.get_status(conv_uid, message_index)
     if f"{conv_uid}:{message_index}" in task_status._status:
         return HTMLResponse(current_status)
 
-    # Status key has been cleared by _run_job — the write is complete (or job died).
+    # Status key has been cleared by _run_job, so the write is complete (or job's dead).
     # Hit the DB to fetch the finished message.
     conversation = db.scalars(
         select(models.Conversation).where(
@@ -293,7 +296,8 @@ async def poll_message(
     bot_by_index = {msg["message_index"]: msg for msg in conversation.bot_messages}
     raw_bot = bot_by_index.get(message_index)
     if raw_bot is not None:
-        # Done — render the completed message group.
+
+        # Render the completed message group.
         bot_msg = dict(raw_bot)
         if isinstance(bot_msg.get("sources"), str):
             bot_msg["sources"] = json.loads(bot_msg["sources"])
@@ -321,7 +325,7 @@ async def poll_message(
             },
         )
 
-    # Bot message not found even after job completion — return last known status.
+    # Bot message not found even after job completion. Return last known status.
     return HTMLResponse(current_status)
 
 
@@ -376,7 +380,7 @@ async def fetch_conversation(
 @router.get("/s/{conv_share_id}")
 @limiter.limit("30/minute")
 async def fetch_shared_conversation(
-    conv_share_id: str,
+    conv_share_id: Annotated[str, Path(max_length=36)],
     request: Request,
     db: Session = Depends(get_db),
 ):
@@ -420,6 +424,7 @@ async def list_conversations(
         .where(models.Conversation.user_uid == uid)
         .where(not_(models.Conversation.deleted))
         .order_by(models.Conversation.updated_at.desc())
+        .limit(100)
     ).all()
 
     convs = [

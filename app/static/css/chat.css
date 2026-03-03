@@ -1,9 +1,4 @@
-/* ============================================================
-   chat.css — Aakda chat page
-   Editorial, line-based, no bubbles, no shadows on content.
-   ============================================================ */
-
-/* ── App shell ── */
+/* Shell */
 .app-shell {
   display: flex;
   height: 100vh;
@@ -11,13 +6,11 @@
   background: var(--ak-bg-surface);
 }
 
-/* ============================================================
-   SIDEBAR
-   ============================================================ */
+/* Sidebar */
 .sidebar {
   width: var(--ak-sidebar-width);
   flex-shrink: 0;
-  background: var(--ak-bg-base);     /* same as page — unified */
+  background: var(--ak-bg-base);
   border-right: 1px solid var(--ak-border);
   display: flex;
   flex-direction: column;
@@ -34,7 +27,7 @@
   pointer-events: none;
 }
 
-/* Sidebar header */
+/* Header */
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -43,7 +36,7 @@
   flex-shrink: 0;
 }
 
-/* App name — 500 weight, no decoration */
+/* Brand */
 .sidebar-brand {
   font-size: 1rem;
   font-weight: 500;
@@ -59,7 +52,7 @@
   flex: 1;
 }
 
-/* Collapse button — no bg, no border */
+/* Collapse */
 .sidebar-toggle-inner {
   width: 36px;
   height: 36px;
@@ -73,8 +66,7 @@
 }
 .sidebar-toggle-inner:hover { color: var(--ak-text); }
 
-/* ── New Conversation ── */
-/* Text label with + prefix; bottom border acts as ruled line separator */
+/* New */
 .sidebar-new-chat {
   flex-shrink: 0;
 }
@@ -98,10 +90,10 @@
 }
 .btn-new-chat:hover { color: var(--ak-accent); }
 
-/* ── Section label ── */
+/* Label */
 .sidebar-section-label {
   padding: 0.875rem 1rem 0.375rem;
-  font-size: 0.6875rem;           /* 11px */
+  font-size: 0.6875rem;
   font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -109,7 +101,7 @@
   flex-shrink: 0;
 }
 
-/* ── History list ── */
+/* History */
 .sidebar-history {
   flex: 1;
   overflow-x: hidden;
@@ -126,7 +118,7 @@
   font-size: 0.8rem;
 }
 
-/* ── Sidebar footer ── */
+/* Footer */
 .sidebar-footer {
   flex-shrink: 0;
   border-top: 1px solid var(--ak-border);
@@ -156,7 +148,7 @@
   gap: 0.25rem;
 }
 
-/* Theme toggle / icon buttons — no bg, no border */
+/* Icons */
 .sidebar-icon-btn {
   width: 34px;
   height: 34px;
@@ -171,11 +163,11 @@
 }
 .sidebar-icon-btn:hover { color: var(--ak-accent); }
 
-/* Delete-all button — error-colored, dimmed at rest */
+/* Delete */
 .sidebar-delete-all-btn { color: var(--ak-error); opacity: 0.5; }
 .sidebar-delete-all-btn:hover { color: var(--ak-error); opacity: 1; }
 
-/* Logout as text link */
+/* Logout */
 .sidebar-logout-btn {
   font-size: 0.75rem;
   font-weight: 400;
@@ -188,10 +180,7 @@
 }
 .sidebar-logout-btn:hover { color: var(--ak-text); }
 
-/* ============================================================
-   SIDEBAR CONVERSATION ITEM
-   Table-row style: each item separated by a 1px bottom border.
-   ============================================================ */
+/* Item */
 .sidebar-item {
   position: relative;
   border-bottom: 1px solid var(--ak-border);
@@ -205,7 +194,7 @@
 .sidebar-item-inner:hover { background: var(--ak-bg-hover); }
 .sidebar-item-inner:hover .sidebar-item-menu-btn { opacity: 1; }
 
-/* Active state — 2px inset left accent border, no layout shift */
+/* Active */
 .sidebar-item.active .sidebar-item-inner {
   box-shadow: inset 2px 0 0 var(--ak-accent);
 }
@@ -243,7 +232,7 @@
   line-height: 1;
 }
 
-/* Shared indicator dot */
+/* Badge */
 .shared-badge {
   width: 5px;
   height: 5px;
@@ -253,7 +242,7 @@
   margin-right: 0.5rem;
 }
 
-/* Three-dot menu button — hidden until hover */
+/* Menu */
 .sidebar-item-menu-btn {
   width: 34px;
   height: 34px;
@@ -272,7 +261,7 @@
 }
 .sidebar-item-menu-btn:hover { color: var(--ak-text); }
 
-/* Dropdown — position:fixed to escape overflow clipping */
+/* Dropdown */
 .sidebar-item .dropdown-content {
   position: fixed;
   width: max-content;
@@ -308,9 +297,7 @@
   color: var(--ak-error);
 }
 
-/* ============================================================
-   MAIN CONTENT AREA
-   ============================================================ */
+/* Main */
 .main-content {
   flex: 1;
   display: flex;
@@ -321,7 +308,7 @@
   background: var(--ak-bg-surface);
 }
 
-/* Top bar */
+/* Topbar */
 .main-topbar {
   display: flex;
   align-items: center;
@@ -347,7 +334,7 @@
 }
 .topbar-toggle-btn:hover { color: var(--ak-text); }
 
-/* Hide hamburger when sidebar is visible; show only when collapsed */
+/* Hamburger */
 .sidebar:not(.collapsed) ~ .main-content .topbar-toggle-btn {
   display: none;
 }
@@ -362,7 +349,7 @@
   text-overflow: ellipsis;
 }
 
-/* ── Messages scroll area ── */
+/* Messages */
 .messages-area {
   flex: 1;
   overflow-y: auto;
@@ -387,7 +374,7 @@
   flex-direction: column;
 }
 
-/* ── Welcome screen — typography only ── */
+/* Welcome */
 .welcome-screen {
   flex: 1;
   display: flex;
@@ -411,14 +398,10 @@
   line-height: 1.6;
 }
 
-/* Chat area — display:contents so children flow into messages-content */
+/* Chat */
 #chat-area { display: contents; }
 
-/* ============================================================
-   MESSAGES — no bubbles, ruled-line separators
-   ============================================================ */
-
-/* Each message group separated by a bottom ruled line */
+/* Group */
 .message-group {
   display: flex;
   flex-direction: column;
@@ -438,7 +421,7 @@
   animation: ak-fadein 0.15s ease forwards;
 }
 
-/* ── User message — right-aligned, no bubble ── */
+/* User */
 .user-row {
   display: flex;
   justify-content: flex-end;
@@ -454,7 +437,7 @@
   gap: 0.25rem;
 }
 
-/* "You" label */
+/* Label */
 .user-label {
   font-size: 0.75rem;
   font-weight: 400;
@@ -462,7 +445,7 @@
   letter-spacing: 0.06em;
 }
 
-/* Message text — no bg, no border, no radius */
+/* Bubble */
 .user-bubble {
   display: inline-block;
   font-size: 0.9375rem;
@@ -473,7 +456,7 @@
   text-align: left;
 }
 
-/* ── AI message ── */
+/* AI */
 .ai-row {
   display: flex;
   flex-direction: column;
@@ -484,7 +467,7 @@
   min-width: 0;
 }
 
-/* Header row: accent icon + "Aakda" label */
+/* Header */
 .ai-header {
   margin-bottom: 0.625rem;
 }
@@ -496,7 +479,7 @@
   letter-spacing: 0.06em;
 }
 
-/* ── Loading state ── */
+/* Loading */
 .ai-loading-row {
   display: flex;
   flex-direction: column;
@@ -522,7 +505,7 @@
   height: 23px;
 }
 
-/* ── Chart container — 1px border, no radius ── */
+/* Chart */
 .chart-container {
   margin: 1rem 0 0;
   border: 1px solid var(--ak-border);
@@ -533,11 +516,11 @@
 .chart-iframe {
   display: block;
   width: 100%;
-  height: 450px; /* overridden by ak-chart-resize message */
+  height: 450px;
   border: none;
 }
 
-/* Expand button — top-right corner of chart, hidden until hover */
+/* Expand */
 .chart-expand-btn {
   position: absolute;
   top: 0.5rem;
@@ -569,7 +552,7 @@
   border-color: var(--ak-accent);
 }
 
-/* ── Chart modal ── */
+/* Modal */
 .chart-modal {
   position: fixed;
   inset: 0;
@@ -609,7 +592,7 @@
   transform: translateY(0) scale(1);
 }
 
-/* Spinner overlay — hides the blank iframe while Plotly initialises */
+/* Loader */
 .chart-modal-loader {
   position: absolute;
   inset: 0;
@@ -650,7 +633,7 @@
   opacity: 1;
 }
 
-/* Close button — top-right of modal */
+/* Close */
 .chart-modal-close {
   position: absolute;
   top: 0.6rem;
@@ -680,7 +663,7 @@
   border-color: var(--ak-accent);
 }
 
-/* ── Raw data collapsible — plain text toggle ── */
+/* Raw */
 details[open] .raw-data-chevron {
   transform: rotate(90deg);
 }
@@ -719,26 +702,22 @@ summary.raw-data-toggle::-webkit-details-marker {
 .raw-data-body {
   margin-top: 0.5rem;
   border: 1px solid var(--ak-border);
-  overflow: auto;
+  overflow: hidden;
   font-size: 0.8rem;
   max-height: 390px;
   background: var(--ak-code-bg);
 }
-.raw-data-body table { min-width: 100%; border-collapse: collapse; }
-.raw-data-body th, .raw-data-body td {
-  padding: 0.35rem 0.65rem;
-  border-bottom: 1px solid var(--ak-border);
-  font-size: 0.78rem;
-}
-.raw-data-body th {
-  font-weight: 500;
-  color: var(--ak-text-muted);
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
+
+.data-iframe {
+  display: block;
+  width: 100%;
+  height: 200px;
+  max-height: 390px;
+  border: none;
+  background: transparent;
 }
 
-/* ── Sources ── */
+/* Sources */
 .sources-section {
   margin-top: 1rem;
   padding-top: 0.75rem;
@@ -784,8 +763,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   max-width: 416px;
 }
 
-/* ── Message meta footer ── */
-/* Plain text, monospace, secondary color, dot-separated */
+/* Meta */
 .message-meta {
   display: flex;
   align-items: center;
@@ -796,9 +774,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   color: var(--ak-text-muted);
 }
 
-/* ============================================================
-   INPUT AREA — flat, bottom-border only
-   ============================================================ */
+/* Input */
 .input-area {
   flex-shrink: 0;
   border-top: 1px solid var(--ak-border);
@@ -813,7 +789,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   margin: 0 auto;
 }
 
-/* Textarea row — bottom border as the input "line" */
+/* Row */
 .input-row {
   display: flex;
   align-items: flex-end;
@@ -845,7 +821,7 @@ summary.raw-data-toggle::-webkit-details-marker {
 
 .chat-textarea::placeholder { color: var(--ak-text-dim); }
 
-/* Send button — small accent circle */
+/* Send */
 .send-btn {
   width: 36px;
   height: 36px;
@@ -865,7 +841,7 @@ summary.raw-data-toggle::-webkit-details-marker {
 .send-btn:active { opacity: 0.85; }
 .send-btn:disabled { background: var(--ak-border); cursor: not-allowed; }
 
-/* Actions row: web search left, ctrl+k right */
+/* Actions */
 .input-actions-row {
   display: flex;
   align-items: center;
@@ -879,7 +855,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   gap: 0.25rem;
 }
 
-/* Web search toggle — text only, no border, no radius */
+/* Toggle */
 .input-option-btn {
   display: inline-flex;
   align-items: center;
@@ -908,9 +884,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   color: var(--ak-text-dim);
 }
 
-/* ============================================================
-   ERROR STATE
-   ============================================================ */
+/* Error */
 .error-bubble {
   display: flex;
   align-items: flex-start;
@@ -947,9 +921,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   word-break: break-word;
 }
 
-/* ============================================================
-   TOAST NOTIFICATION
-   ============================================================ */
+/* Toast */
 .ak-toast {
   position: fixed;
   top: 1rem;
@@ -997,9 +969,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   to   { opacity: 0; transform: translateY(-4px); }
 }
 
-/* ============================================================
-   DELETE-ALL CONFIRMATION MODAL
-   ============================================================ */
+/* Confirm */
 .ak-confirm-overlay {
   position: fixed;
   inset: 0;

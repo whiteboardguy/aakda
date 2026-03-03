@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from ..cfg import settings
@@ -11,7 +11,7 @@ from .print_utils import printStat
 
 
 # ---------------------------------------------------------------------------
-# Conversation purge
+# Purge Conversations
 # ---------------------------------------------------------------------------
 
 
@@ -26,28 +26,22 @@ async def _purge_once(delete_after_days: int) -> None:
 
     try:
         with Session(engine) as db:
-            query = select(models.Conversation).where(
+            stmt = delete(models.Conversation).where(
                 models.Conversation.deleted == True  # noqa: E712
             )
 
             if delete_after_days > 0:
                 cutoff = now - timedelta(days=delete_after_days)
-                query = query.where(models.Conversation.deleted_at <= cutoff)
+                stmt = stmt.where(models.Conversation.deleted_at <= cutoff)
 
-            conversations = db.scalars(query).all()
-
-            if not conversations:
-                printStat("o", "Purge: no conversations to delete.")
-                return
-
-            for conv in conversations:
-                db.delete(conv)
-
+            result = db.execute(stmt)
             db.commit()
-            printStat(
-                "o",
-                f"Purge: permanently deleted {len(conversations)} conversation(s).",
-            )
+
+            count = result.rowcount
+            if count == 0:
+                printStat("o", "Purge: no conversations to delete.")
+            else:
+                printStat("o", f"Purge: permanently deleted {count} conversation(s).")
     except Exception as e:
         printStat("c", f"Purge: error during conversation purge — {e}")
 
@@ -93,7 +87,7 @@ async def run_purge_loop() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Session purge — runs every 30 minutes, cleans expired session rows
+# Purge Sessions (frequency of 30mins)
 # ---------------------------------------------------------------------------
 
 
@@ -102,21 +96,14 @@ async def _purge_sessions_once() -> None:
     now = datetime.now(timezone.utc)
     try:
         with Session(engine) as db:
-            expired = db.scalars(
-                select(models.Session).where(models.Session.expire_at < now)
-            ).all()
-
-            if not expired:
-                return
-
-            for session in expired:
-                db.delete(session)
-
-            db.commit()
-            printStat(
-                "o",
-                f"Session purge: removed {len(expired)} expired session(s).",
+            result = db.execute(
+                delete(models.Session).where(models.Session.expire_at < now)
             )
+            db.commit()
+
+            count = result.rowcount
+            if count:
+                printStat("o", f"Session purge: removed {count} expired session(s).")
     except Exception as e:
         printStat("c", f"Session purge: error — {e}")
 
@@ -124,7 +111,7 @@ async def _purge_sessions_once() -> None:
 async def run_session_purge_loop() -> None:
     """Runs every 30 minutes and removes expired session rows from the database."""
     printStat("o", "Session purge loop started (interval: 30 minutes).")
-    # Run immediately on startup.
+    # Run first on startup, then go into loop
     await _purge_sessions_once()
     while True:
         await asyncio.sleep(1800)

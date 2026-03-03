@@ -1,30 +1,26 @@
-import uuid
-from datetime import datetime
-from typing import Annotated, Optional, Literal, List
+from typing import List
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from fastapi import Form
 
 from ..cfg import settings
 
-# ADD THIS in models FOR SQLALCHEMY ORM FALLBACK =>    model_config = ConfigDict(from_attributes=True)
-
 
 class User_Create_Request(BaseModel):
     email: EmailStr
-    username: str
-    display_name: str
-    password: str
+    username: str = Field(min_length=1, max_length=32)
+    display_name: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class User_Login_Request(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
 
 
 class Conversation_Request(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=4000)
     opt_web: bool = True
     model: str = f"{settings.llm_model_id}"
 
@@ -34,7 +30,7 @@ class Conversation_Request(BaseModel):
         return v.strip() or settings.llm_model_id
 
 
-# Aliases kept so that existing route annotations stay readable.
+# Semantic meaning ig
 Conversation_Create_Request = Conversation_Request
 Conversation_Continue_Request = Conversation_Request
 

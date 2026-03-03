@@ -6,14 +6,14 @@
   <title>{% block title %}Aakda{% endblock %}</title>
   <link rel="icon" type="image/x-icon" href="/static/aakda.ico" />
 
-  <!-- DaisyUI (components) -->
+  <!-- DaisyUI for components -->
   <link href="/static/css/daisyui.min.css" rel="stylesheet" />
-  <!-- Tailwind CSS (utilities) -->
+  <!-- Tailwind CSS for some utils -->
   <script src="/static/js/tailwind.cdn.js"></script>
   <!-- highlight.js — theme CSS loaded before content renders -->
   <link rel="stylesheet" href="/static/css/hljs-github-dark-dimmed.min.css" />
 
-  <!-- Site-wide design system -->
+  <!-- Site-wide design styles -->
   <link rel="stylesheet" href="/static/css/_site.css" />
   {% block extra_css %}{% endblock %}
 </head>
@@ -29,7 +29,7 @@
           <path d="M6 6L18 18" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
         </svg>
       </button>
-      <!-- Loading spinner — visible until iframe content is ready -->
+      <!-- Loading spinner  until iframe's ready -->
       <div id="chart-modal-loader" class="chart-modal-loader">
         <div class="chart-modal-spinner"></div>
       </div>
