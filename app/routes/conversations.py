@@ -62,7 +62,8 @@ async def _run_job(
 
         result["message_index"] = message_index
 
-        # Persist with an independent DB session and an ownership re-check.
+        # Persist with an independent DB session and,
+        # checking if the conversation belongs to the user.
         with Session(engine) as db:
             conversation = db.scalars(
                 select(models.Conversation).where(
@@ -73,14 +74,14 @@ async def _run_job(
             ).first()
 
             if not conversation:
-                raise RuntimeError("Conversation not found or access denied")
+                raise RuntimeError("Conversation not found")
 
             conversation.bot_messages.append(result)
             attributes.flag_modified(conversation, "bot_messages")
             conversation.updated_at = datetime.now(timezone.utc)
             db.commit()
 
-        # Normalise any JSON-string fields before rendering.
+        # Normalise json fields before rendering.
         bot_msg = dict(result)
         if isinstance(bot_msg.get("sources"), str):
             bot_msg["sources"] = json.loads(bot_msg["sources"])
@@ -89,6 +90,8 @@ async def _run_job(
 
         user_msg_dict = {"message": query, "message_index": message_index}
 
+        # Sends it to the message grouping partial. 
+        # It handles each section/bundle of user message, bot reply/render/data, metadata
         html = templates.env.get_template("partials/message_group.html").render(
             {
                 "user_msg": user_msg_dict,
@@ -139,7 +142,7 @@ async def create_conversation(
     db.refresh(new_conversation)
 
     conv_uid = str(new_conversation.uid)
-    job_id = str(uuid.uuid4())
+    job_id = str(uuid.uuid4()) # create a job uid
     q = jobs.create_job(job_id)  # noqa: F841 — queue handed off to background task
 
     asyncio.create_task(
@@ -211,6 +214,8 @@ async def continue_conversation(
     db.commit()
 
     # Snapshot after appending the new user message.
+    # Fed to the bot. Better than fetch from db 
+    # if db session closes or db gets appended.
     snapshot_user = list(conversation.user_messages)
     snapshot_bot = list(conversation.bot_messages)
 
@@ -315,7 +320,7 @@ async def fetch_conversation(
 
 
 # ---------------------------------------------------------------------------
-# GET /conversations/s/{conv_share_id}  — public shared conversation page
+# GET /conversations/s/{conv_share_id}  — publicly shared conversation page
 # ---------------------------------------------------------------------------
 @router.get("/s/{conv_share_id}")
 async def fetch_shared_conversation(

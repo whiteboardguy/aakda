@@ -50,7 +50,13 @@
   color: var(--ak-text);
   display: flex;
   align-items: center;
-  gap: 0;
+  flex: 1;
+}
+
+.sidebar-brand-text {
+  font-family: var(--ak-font-mono) !important;
+  text-align: center;
+  flex: 1;
 }
 
 /* Collapse button — no bg, no border */
@@ -476,23 +482,14 @@
 
 /* Header row: accent icon + "Aakda" label */
 .ai-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
   margin-bottom: 0.625rem;
 }
 
-.ai-header-icon {
-  display: flex;
-  align-items: center;
-  color: var(--ak-accent);
-  flex-shrink: 0;
-}
-
 .ai-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--ak-text);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ak-text-muted);
+  letter-spacing: 0.06em;
 }
 
 /* ── Loading state ── */
