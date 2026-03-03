@@ -120,4 +120,6 @@ async def delete_conversation(
     db.commit()
 
     # Empty response — htmx outerHTML swap removes the element from the DOM.
-    return HTMLResponse("")
+    # HX-Trigger fires a document-level event so JS can redirect regardless of
+    # which element triggered the delete.
+    return HTMLResponse("", headers={"HX-Trigger-After-Swap": "convDeleted"})

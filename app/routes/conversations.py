@@ -172,6 +172,7 @@ async def create_conversation(
                 "title": user_input.query[:40],
             },
         },
+        headers={"X-Conv-Id": conv_uid},
     )
 
 
@@ -445,6 +446,7 @@ async def list_conversations(
             "shared_link": conv.shared_link,
         }
         for conv in user_conversations
+        if conv.bot_messages
     ]
 
     return templates.TemplateResponse(

@@ -107,10 +107,6 @@ def _jina_search(query: str) -> str:
 
 # ── RAW HTTP CALL ─────────────────────────────────────────────────────────────
 def _raw_call(messages: list, tools: list, model: str) -> dict:
-    printStat(
-        "o",
-        f"LLM request → model={model} messages={len(messages)} tools={[t['function']['name'] for t in tools]}",
-    )
     t0 = time.monotonic()
     try:
         resp = _client.post(
@@ -133,17 +129,10 @@ def _raw_call(messages: list, tools: list, model: str) -> dict:
     except Exception as e:
         printStat("c", f"LLM HTTP transport error: {type(e).__name__}: {e}")
         raise
-    elapsed = time.monotonic() - t0
-    printStat("o", f"LLM response ← HTTP {resp.status_code} in {elapsed:.1f}s")
     if resp.status_code != 200:
         printStat("c", f"LLM error body: {resp.text[:1000]}")
     resp.raise_for_status()
     data = resp.json()
-    choice = data.get("choices", [{}])[0]
-    finish = choice.get("finish_reason", "?")
-    tcs = choice.get("message", {}).get("tool_calls") or []
-    tc_names = [tc["function"]["name"] for tc in tcs]
-    printStat("o", f"LLM finish_reason={finish} tool_calls={tc_names or 'none'}")
     return data
 
 

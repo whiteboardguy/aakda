@@ -434,8 +434,6 @@ def fetch_graph(
         ast_error = validate_ast(code)
         if ast_error:
             push(f"Validation failed (attempt {retries + 1}) — asking LLM to fix…")
-            printStat("w", f"fetch_graph attempt={retries + 1} AST error: {ast_error}")
-            printStat("w", f"Rejected code ({len(code)} chars):\n{code[:800]}")
             last_error = ast_error
             retries += 1
             continue
@@ -462,10 +460,6 @@ def fetch_graph(
                 "is_render": True,
             }
 
-        printStat(
-            "w",
-            f"fetch_graph attempt={retries + 1} sandbox error: {exec_result['error']}",
-        )
         push(f"Sandbox error on attempt {retries + 1} — asking LLM to fix…")
         last_error = exec_result["error"]
         retries += 1

@@ -69,19 +69,23 @@ window.resetFormToNew = function() {
   _setActiveSidebarItem(null);
 };
 
-/* Called after a conversation is deleted — clear content + push URL if it was active */
+/* Called after a conversation is deleted — always reset to home */
 window.onConvDeleted = function(convId) {
-  if (_activeConvId === convId) {
-    window.resetFormToNew();
-    const content = document.getElementById('messages-content');
-    if (content) content.innerHTML =
-      '<div id="welcome-screen" class="welcome-screen">' +
-        '<h1 class="welcome-heading">What would you like to know?</h1>' +
-        '<p class="welcome-sub">Ask me to chart paper with numbers, fake online currency, or search the web for insights.</p>' +
-      '</div>';
-    history.pushState(null, '', '/');
-  }
+  window.resetFormToNew();
+  const content = document.getElementById('messages-content');
+  if (content) content.innerHTML =
+    '<div id="welcome-screen" class="welcome-screen">' +
+      '<h1 class="welcome-heading">What would you like to know?</h1>' +
+      '<p class="welcome-sub">Ask me to chart paper with numbers, fake online currency, or search the web for insights.</p>' +
+    '</div>';
+  history.pushState(null, '', '/');
 };
+
+/* Document-level event fired by HX-Trigger-After-Swap on the delete endpoint response.
+   Fires after the <li> is removed from the DOM, falls back to document.body. */
+document.body.addEventListener('convDeleted', function() {
+  window.onConvDeleted();
+});
 
 /* Show a temporary toast notification */
 window.showToast = function(message, durationMs = 3500) {
@@ -343,7 +347,7 @@ document.body.addEventListener('htmx:afterSettle', (evt) => {
   }
 });
 
-/* After chat-form request: reset textarea; handle share link header */
+/* After chat-form request: reset textarea; handle conv URL push; handle share link header */
 document.body.addEventListener('htmx:afterRequest', evt => {
   const elt = evt.detail.elt;
 
@@ -353,6 +357,14 @@ document.body.addEventListener('htmx:afterRequest', evt => {
       textarea.value = '';
       textarea.style.height = 'auto';
       textarea.blur();
+    }
+
+    /* If this was a new conversation, the server sends back the new conv UUID.
+       Push /c/{id} into the URL and wire the form to continue that conversation. */
+    const convId = evt.detail.xhr.getResponseHeader('X-Conv-Id');
+    if (convId) {
+      history.pushState(null, '', '/c/' + convId);
+      window.updateFormAction(convId);
     }
   }
 

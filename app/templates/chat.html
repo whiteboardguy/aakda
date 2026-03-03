@@ -219,4 +219,12 @@
   <div id="ak-toast" class="ak-toast" aria-live="polite" aria-atomic="true"></div>
 
 </div>
+
+{% if initial_conv_id %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    window.updateFormAction('{{ initial_conv_id }}');
+  });
+</script>
+{% endif %}
 {% endblock %}
