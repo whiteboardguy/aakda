@@ -1,6 +1,11 @@
 # aakda
 
-AI-powered interactive graph maker. FastAPI + PostgreSQL + Uvicorn, containerised with Docker Compose.
+> [!WARNING]
+> This is the development branch. For stable releases, switch to `main` branch.
+
+---
+
+AI-powered interactive graph maker. FastAPI + PostgreSQL + HTMx.
 
 ---
 
@@ -20,7 +25,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-The app will be available at `http://localhost:${INSTANCE_PORT}` (default `5000`).
+The app will be available at `http://localhost:${INSTANCE_PORT}` (default being `5000`).
 
 Migrations run automatically on container start via `alembic upgrade head`.
 
