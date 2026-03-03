@@ -869,7 +869,7 @@ summary.raw-data-toggle::-webkit-details-marker {
   padding: 0;
 }
 .input-option-btn:hover:not(.active) { color: var(--ak-text); }
-.input-option-btn.active { color: var(--ak-accent); }
+.input-option-btn.active { background-color: rgba(150, 150, 200, .3); border-radius: 30px; padding: 5px 10px; text-align: center; }
 .input-option-btn.active:hover { color: var(--ak-accent-hover); }
 
 .input-kbd-hint {

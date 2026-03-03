@@ -11,6 +11,8 @@ try:
 except Exception as e:
     printStat("c", "Database URL is invalid or doesn't exist.")
     printStat("c", str(e))
+    DB_URL = ""
+    DB_URL_SAFE = ""
 
 
 printStat("o", f"Database URL ==> {DB_URL_SAFE}")
@@ -18,13 +20,12 @@ printStat("o", "Attempting to create database engine.")
 
 try:
     engine = create_engine(DB_URL)
+    printStat("o", f"Successfully created database engine for ==> {DB_URL_SAFE}")
+    printStat("o", f"Database engine ==> {engine}")
 except Exception as e:
     printStat("c", "Failed to create the database engine.")
     printStat("c", str(e))
-
-
-printStat("o", f"Successfully created database engine for ==> {DB_URL_SAFE}")
-printStat("o", f"Database engine ==> {engine}")
+    engine = None
 
 
 class Base(DeclarativeBase):

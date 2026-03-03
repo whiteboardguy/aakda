@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -8,18 +9,19 @@ from typing import Callable, Optional
 import httpx
 
 from ..cfg import settings
+from .print_utils import printStat
 
-BASE_URL       = settings.llm_base_url
-API_KEY        = settings.llm_api_key
-JINA_API_KEY   = settings.tools_jina_api
+BASE_URL = settings.llm_base_url
+API_KEY = settings.llm_api_key
+JINA_API_KEY = settings.tools_jina_api
 MAX_ITERATIONS = settings.tools_iteration_count
 
 _client = httpx.Client(timeout=120.0)
 
 # Load system prompt once at import time — fails loudly if the file is missing
-SYSTEM_PROMPT: str = (
-    Path(__file__).parent / "prompts" / "system.md"
-).read_text(encoding="utf-8")
+SYSTEM_PROMPT: str = (Path(__file__).parent / "prompts" / "system.md").read_text(
+    encoding="utf-8"
+)
 
 
 # ── TOOL SCHEMAS ──────────────────────────────────────────────────────────────
@@ -78,9 +80,9 @@ def _jina_search(query: str) -> str:
         req = urllib.request.Request(
             f"https://s.jina.ai/{encoded}",
             headers={
-                "Authorization":        f"Bearer {JINA_API_KEY}",
-                "Accept":               "application/json",
-                "X-Budget-Tokens":      "1500",
+                "Authorization": f"Bearer {JINA_API_KEY}",
+                "Accept": "application/json",
+                "X-Budget-Tokens": "1500",
                 "X-With-Generated-Alt": "true",
             },
         )
@@ -94,8 +96,8 @@ def _jina_search(query: str) -> str:
         lines = [f"Web search results for «{query}»:\n"]
         for i, r in enumerate(results[:5], 1):
             title = r.get("title", "No title")
-            link  = r.get("url", "")
-            desc  = (r.get("description") or r.get("content", ""))[:400]
+            link = r.get("url", "")
+            desc = (r.get("description") or r.get("content", ""))[:400]
             lines.append(f"[{i}] {title}\n    URL: {link}\n    {desc}\n")
         return "\n".join(lines)
 
@@ -105,23 +107,44 @@ def _jina_search(query: str) -> str:
 
 # ── RAW HTTP CALL ─────────────────────────────────────────────────────────────
 def _raw_call(messages: list, tools: list, model: str) -> dict:
-    resp = _client.post(
-        f"{BASE_URL}/chat/completions",
-        headers={
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type":  "application/json",
-        },
-        content=json.dumps({
-            "model":       model,
-            "messages":    messages,
-            "tools":       tools,
-            "tool_choice": "auto",
-            "temperature": 0.0,
-            "max_tokens":  4096,
-        }),
+    printStat(
+        "o",
+        f"LLM request → model={model} messages={len(messages)} tools={[t['function']['name'] for t in tools]}",
     )
+    t0 = time.monotonic()
+    try:
+        resp = _client.post(
+            f"{BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json",
+            },
+            content=json.dumps(
+                {
+                    "model": model,
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": "auto",
+                    "temperature": 0.0,
+                    "max_tokens": 4096,
+                }
+            ),
+        )
+    except Exception as e:
+        printStat("c", f"LLM HTTP transport error: {type(e).__name__}: {e}")
+        raise
+    elapsed = time.monotonic() - t0
+    printStat("o", f"LLM response ← HTTP {resp.status_code} in {elapsed:.1f}s")
+    if resp.status_code != 200:
+        printStat("c", f"LLM error body: {resp.text[:1000]}")
     resp.raise_for_status()
-    return resp.json()
+    data = resp.json()
+    choice = data.get("choices", [{}])[0]
+    finish = choice.get("finish_reason", "?")
+    tcs = choice.get("message", {}).get("tool_calls") or []
+    tc_names = [tc["function"]["name"] for tc in tcs]
+    printStat("o", f"LLM finish_reason={finish} tool_calls={tc_names or 'none'}")
+    return data
 
 
 # ── PUBLIC HELPERS ────────────────────────────────────────────────────────────
@@ -131,17 +154,17 @@ def make_tool_error(tc_id: str, error: str) -> dict:
     Append this to _working_msgs before retrying call_llm.
     """
     return {
-        "role":         "tool",
+        "role": "tool",
         "tool_call_id": tc_id,
-        "content":      json.dumps({"success": False, "error": error}),
+        "content": json.dumps({"success": False, "error": error}),
     }
 
 
 # ── MAIN PUBLIC API ───────────────────────────────────────────────────────────
 def call_llm(
-    messages:  list,
-    opt_web:   bool              = False,
-    model:     str               = "gpt-oss-120b",
+    messages: list,
+    opt_web: bool = False,
+    model: str = "gpt-oss-120b",
     on_status: Optional[Callable] = None,
 ) -> dict:
     """
@@ -155,12 +178,13 @@ def call_llm(
         _tc_id        str          — tool_call id of the code call (internal, for error feedback)
         _working_msgs list         — accumulated message list (internal, for error feedback)
     """
+
     def push(text: str):
         if on_status:
             on_status(text)
 
-    tools        = [CHART_TOOL, SEARCH_TOOL] if opt_web else [CHART_TOOL]
-    working_msgs = list(messages)   # local copy — never mutate caller's list
+    tools = [CHART_TOOL, SEARCH_TOOL] if opt_web else [CHART_TOOL]
+    working_msgs = list(messages)  # local copy — never mutate caller's list
     tools_called: list = []
 
     for iteration in range(MAX_ITERATIONS):
@@ -171,24 +195,34 @@ def call_llm(
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             if status in (401, 403):
+                printStat(
+                    "c",
+                    f"LLM auth failed (HTTP {status}) — check LLM_API_KEY and LLM_BASE_URL",
+                )
                 raise RuntimeError(f"LLM authentication failed (HTTP {status}).") from e
+            printStat("c", f"LLM HTTP {status} error on iteration {iteration + 1}")
             raise
 
         choice = raw["choices"][0]
-        msg    = choice["message"]
-        text   = msg.get("content") or ""
-        tcs    = msg.get("tool_calls") or []
+        msg = choice["message"]
+        text = msg.get("content") or ""
+        tcs = msg.get("tool_calls") or []
 
-        working_msgs.append(msg)
+        # Only append the assistant message if it has content or tool_calls.
+        # An empty assistant message (finish_reason=stop, no content, no tool_calls)
+        # causes a 400 "assistant message must include content or tool_calls" on the
+        # next request. Skip it entirely — there's nothing useful to preserve.
+        if text or tcs:
+            working_msgs.append(msg)
 
         # ── No tool call → plain text final reply ─────────────────────────
         if not tcs:
             push("Done.")
             return {
-                "code":          None,
-                "message":       text,
-                "tools_called":  tools_called,
-                "_tc_id":        None,
+                "code": None,
+                "message": text,
+                "tools_called": tools_called,
+                "_tc_id": None,
                 "_working_msgs": working_msgs,
             }
 
@@ -196,7 +230,7 @@ def call_llm(
             fn_name = tc["function"]["name"]
             try:
                 args = json.loads(tc["function"]["arguments"])
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 args = {}
 
             # ── Search branch ──────────────────────────────────────────────
@@ -204,16 +238,20 @@ def call_llm(
                 query = args.get("query", "").strip()
                 push(f"Searching the web: {query[:70]}…")
                 result = _jina_search(query)
-                tools_called.append({
-                    "name":     "search_web",
-                    "summary":  query,
-                    "response": result[:600],   # truncated for DB storage only
-                })
-                working_msgs.append({
-                    "role":         "tool",
-                    "tool_call_id": tc["id"],
-                    "content":      result,     # full result goes to the LLM
-                })
+                tools_called.append(
+                    {
+                        "name": "search_web",
+                        "summary": query,
+                        "response": result[:600],  # truncated for DB storage only
+                    }
+                )
+                working_msgs.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": result,  # full result goes to the LLM
+                    }
+                )
 
             # ── Chart code branch ──────────────────────────────────────────
             elif fn_name == "execute_python_for_chart":
@@ -221,30 +259,34 @@ def call_llm(
 
                 if not code:
                     # Feed empty-code error back and continue the loop
-                    working_msgs.append({
-                        "role":         "tool",
-                        "tool_call_id": tc["id"],
-                        "content":      json.dumps({
-                            "success": False,
-                            "error":   "Empty code block returned. Write the full Python code.",
-                        }),
-                    })
+                    working_msgs.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc["id"],
+                            "content": json.dumps(
+                                {
+                                    "success": False,
+                                    "error": "Empty code block returned. Write the full Python code.",
+                                }
+                            ),
+                        }
+                    )
                     continue
 
                 push("Code received — handing off to sandbox…")
                 return {
-                    "code":          code,
-                    "message":       text or "Here's your interactive chart:",
-                    "tools_called":  tools_called,
-                    "_tc_id":        tc["id"],
+                    "code": code,
+                    "message": text or "Here's your interactive chart:",
+                    "tools_called": tools_called,
+                    "_tc_id": tc["id"],
                     "_working_msgs": working_msgs,
                 }
 
     # Exhausted all iterations without producing code
     return {
-        "code":          None,
-        "message":       f"Could not produce chart code after {MAX_ITERATIONS} LLM passes.",
-        "tools_called":  tools_called,
-        "_tc_id":        None,
+        "code": None,
+        "message": f"Could not produce chart code after {MAX_ITERATIONS} LLM passes.",
+        "tools_called": tools_called,
+        "_tc_id": None,
         "_working_msgs": working_msgs,
     }

@@ -23,6 +23,10 @@ _UTILS_PATH = str(Path(__file__).parent.parent)  # app/utils/
 # sys.executable under `uv run` can point to the uv shim rather than the venv interpreter.
 _VENV_PYTHON = Path(__file__).parents[3] / ".venv" / "bin" / "python"
 _PYTHON = str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable
+printStat(
+    "o",
+    f"Sandbox python: {_PYTHON} (venv={'yes' if _VENV_PYTHON.exists() else 'NO — falling back to sys.executable'})",
+)
 
 # Env var prefixes to strip from the child process environment
 _STRIP_PREFIXES = (
@@ -118,12 +122,18 @@ def _execute_subprocess(code: str, exec_timeout: int = EXEC_TIMEOUT) -> dict:
         child_env["ACFV_CODE_FILE"] = code_file
         child_env["ACFV_OUT_FILE"] = out_file
 
+        printStat("o", f"Sandbox exec: python={_PYTHON} timeout={exec_timeout}s")
+        t0 = time.monotonic()
         proc = subprocess.run(
-            [_PYTHON, _RUNNER],  # ← was [sys.executable, _RUNNER]
+            [_PYTHON, _RUNNER],
             capture_output=True,
             text=True,
             timeout=exec_timeout,
             env=child_env,
+        )
+        elapsed = time.monotonic() - t0
+        printStat(
+            "o", f"Sandbox exit: returncode={proc.returncode} elapsed={elapsed:.1f}s"
         )
 
         if proc.returncode != 0:
@@ -343,6 +353,10 @@ def fetch_graph(
     last_error = ""
     llm_result: Optional[dict] = None
 
+    printStat(
+        "o",
+        f"fetch_graph: query={query[:80]!r} model={model} opt_web={opt_web} timeout={timeout}s",
+    )
     base_messages = _reconstruct_messages(user_messages, bot_messages)
     base_messages.append({"role": "user", "content": query})
 
@@ -375,7 +389,11 @@ def fetch_graph(
 
         # ── Plain text reply — no chart ────────────────────────────────────
         if llm_result.get("code") is None:
-            if retries < MAX_RETRIES:
+            # If the LLM already used tools (searched the web) and still returned
+            # plain text, it genuinely looked and found nothing chartable — accept
+            # the answer immediately. Only retry if it gave up without trying at all.
+            already_searched = bool(llm_result.get("tools_called"))
+            if not already_searched and retries < MAX_RETRIES:
                 push(
                     f"No tool call (attempt {retries + 1}) — prompting LLM to call the tool…"
                 )
@@ -420,6 +438,8 @@ def fetch_graph(
         ast_error = validate_ast(code)
         if ast_error:
             push(f"Validation failed (attempt {retries + 1}) — asking LLM to fix…")
+            printStat("w", f"fetch_graph attempt={retries + 1} AST error: {ast_error}")
+            printStat("w", f"Rejected code ({len(code)} chars):\n{code[:800]}")
             last_error = ast_error
             retries += 1
             continue
@@ -430,10 +450,15 @@ def fetch_graph(
             return _error_dict("Total timeout exceeded.", model, retries)
 
         push(f"Executing sandbox (attempt {retries + 1})…")
+        printStat(
+            "o",
+            f"fetch_graph attempt={retries + 1} running code ({len(code)} chars):\n{code[:800]}",
+        )
         exec_result = _execute_subprocess(code, exec_timeout=exec_secs)
 
         if exec_result["success"]:
             push("Rendering chart…")
+            printStat("o", f"fetch_graph success on attempt={retries + 1}")
             return {
                 "render_plot_html": exec_result["plot_html"],
                 "render_html_data": exec_result.get("data_html") or "",
@@ -446,10 +471,18 @@ def fetch_graph(
                 "is_render": True,
             }
 
+        printStat(
+            "w",
+            f"fetch_graph attempt={retries + 1} sandbox error: {exec_result['error']}",
+        )
         push(f"Sandbox error on attempt {retries + 1} — asking LLM to fix…")
         last_error = exec_result["error"]
         retries += 1
 
+    printStat(
+        "c",
+        f"fetch_graph failed after {MAX_RETRIES} attempts. Last error: {last_error}",
+    )
     return _error_dict(
         f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}",
         model,

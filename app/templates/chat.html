@@ -33,6 +33,7 @@
               hx-get="/conversations/new-form"
               hx-target="#messages-content"
               hx-swap="innerHTML"
+              hx-push-url="/"
               hx-on::after-request="window.resetFormToNew()">
         + New Conversation
       </button>

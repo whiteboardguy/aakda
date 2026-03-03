@@ -35,11 +35,41 @@ try:
     import plotly.graph_objects as go
     import numpy as np
     import json as _json
+    import io as _io
+    import urllib.request as _urllib_request
+    import urllib.parse as _urllib_parse
     from datetime import datetime, timedelta
     import datetime as _dt_module
 except ImportError as e:
     sys.stderr.write(f"Library import failed: {e}\n")
     sys.exit(1)
+
+
+def _wb_fetch(url: str) -> list:
+    """Fetch a World Bank API URL and return the records list (second element of response)."""
+    with _urllib_request.urlopen(url, timeout=15) as r:
+        payload = _json.loads(r.read().decode())
+    if not isinstance(payload, list) or len(payload) < 2:
+        raise ValueError(
+            f"Unexpected World Bank response structure: {str(payload)[:200]}"
+        )
+    records = payload[1]
+    if not records:
+        raise ValueError(f"World Bank returned no records for URL: {url}")
+    return records
+
+
+def _url_fetch_text(url: str) -> str:
+    """Fetch any URL and return the response body as a UTF-8 string.
+    Use this to download CSV, JSON, or HTML from URLs found via search_web.
+    Then parse with pd.read_csv(io.StringIO(text)) or json.loads(text).
+    """
+    req = _urllib_request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; ACFV/1.0)"},
+    )
+    with _urllib_request.urlopen(req, timeout=20) as r:
+        return r.read().decode("utf-8", errors="replace")
 
 
 # ── flatten_yf defined inline — no external import needed ─────────────────────
@@ -51,7 +81,44 @@ def flatten_yf(df):
 
 # ── Restricted __import__ stub ───────────────────────────────────────────────
 _ALLOWED_IMPORTS = frozenset(
-    {"pandas", "numpy", "plotly", "yfinance", "datetime", "json"}
+    {
+        # Data
+        "pandas",
+        "numpy",
+        # Plotting
+        "plotly",
+        # Finance
+        "yfinance",
+        # Date/time
+        "datetime",
+        "time",
+        "calendar",
+        # Math/stats
+        "math",
+        "statistics",
+        "decimal",
+        "fractions",
+        "random",
+        # Data formats
+        "json",
+        "csv",
+        "io",
+        # String/text
+        "string",
+        "re",
+        "textwrap",
+        "unicodedata",
+        # Collections/itertools
+        "collections",
+        "itertools",
+        "functools",
+        "operator",
+        # Network (read-only fetching only)
+        "urllib",
+        "http",
+        # Type hints (safe)
+        "typing",
+    }
 )
 
 
@@ -117,12 +184,13 @@ _SAFE_GLOBALS = {
     "px": px,
     "go": go,
     "np": np,
-    "datetime": datetime,
-    "timedelta": timedelta,
-    "flatten_yf": flatten_yf,
-    "json": _json,
     "datetime": _dt_module,
     "timedelta": _dt_module.timedelta,
+    "flatten_yf": flatten_yf,
+    "wb_fetch": _wb_fetch,
+    "url_fetch_text": _url_fetch_text,
+    "io": _io,
+    "json": _json,
 }
 
 # ── Read code ─────────────────────────────────────────────────────────────────

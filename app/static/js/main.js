@@ -69,6 +69,20 @@ window.resetFormToNew = function() {
   _setActiveSidebarItem(null);
 };
 
+/* Called after a conversation is deleted — clear content + push URL if it was active */
+window.onConvDeleted = function(convId) {
+  if (_activeConvId === convId) {
+    window.resetFormToNew();
+    const content = document.getElementById('messages-content');
+    if (content) content.innerHTML =
+      '<div id="welcome-screen" class="welcome-screen">' +
+        '<h1 class="welcome-heading">What would you like to know?</h1>' +
+        '<p class="welcome-sub">Ask me to chart paper with numbers, fake online currency, or search the web for insights.</p>' +
+      '</div>';
+    history.pushState(null, '', '/');
+  }
+};
+
 /* Show a temporary toast notification */
 window.showToast = function(message, durationMs = 3500) {
   const container = document.getElementById('ak-toast');
@@ -304,6 +318,7 @@ window.handleDeleteAllConfirm = function(btn) {
     const list = document.getElementById('sidebar-history-list');
     if (list) list.innerHTML = '';
     window.resetFormToNew();
+    history.pushState(null, '', '/');
     closeDeleteAllModal();
   });
 };

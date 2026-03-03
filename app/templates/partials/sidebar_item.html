@@ -64,7 +64,8 @@
                   hx-post="/conversations/opts/delete/{{ conv.uuid }}"
                   hx-target="#sidebar-conv-{{ conv.uuid }}"
                   hx-swap="outerHTML"
-                  hx-trigger="confirmed">
+                  hx-trigger="confirmed"
+                  hx-on::after-request="if(event.detail.successful) window.onConvDeleted('{{ conv.uuid }}')">
             Delete
           </button>
         </li>
