@@ -353,10 +353,6 @@ def fetch_graph(
     last_error = ""
     llm_result: Optional[dict] = None
 
-    printStat(
-        "o",
-        f"fetch_graph: query={query[:80]!r} model={model} opt_web={opt_web} timeout={timeout}s",
-    )
     base_messages = _reconstruct_messages(user_messages, bot_messages)
     base_messages.append({"role": "user", "content": query})
 
@@ -450,15 +446,10 @@ def fetch_graph(
             return _error_dict("Total timeout exceeded.", model, retries)
 
         push(f"Executing sandbox (attempt {retries + 1})…")
-        printStat(
-            "o",
-            f"fetch_graph attempt={retries + 1} running code ({len(code)} chars):\n{code[:800]}",
-        )
         exec_result = _execute_subprocess(code, exec_timeout=exec_secs)
 
         if exec_result["success"]:
             push("Rendering chart…")
-            printStat("o", f"fetch_graph success on attempt={retries + 1}")
             return {
                 "render_plot_html": exec_result["plot_html"],
                 "render_html_data": exec_result.get("data_html") or "",
