@@ -3,6 +3,13 @@
    Monospace, centered, editorial. No card, no shadow, no radius.
    ============================================================ */
 
+html, body {
+  background: var(--ak-bg);
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .auth-page {
   min-height: 100vh;
   display: flex;

@@ -36,7 +36,7 @@
       {% if bot_msg.is_render and bot_msg.render_plot_html %}
         <div class="chart-container">
           {% set _chart_reset = '<style>html,body{margin:0;padding:0;overflow:hidden;}</style><script>window.addEventListener("load",function(){var h=document.documentElement.scrollHeight||document.body.scrollHeight;parent.postMessage({type:"ak-chart-resize",height:h},"*");});<\/script>' %}
-          <iframe sandbox="allow-scripts"
+          <iframe sandbox="allow-scripts allow-downloads"
                   srcdoc="{{ (_chart_reset + bot_msg.render_plot_html) | e }}"
                   class="chart-iframe"
                   loading="lazy"

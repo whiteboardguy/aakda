@@ -122,11 +122,20 @@
   padding: 0;
 }
 
+/* ── Override DaisyUI's [data-theme] background with our own ── */
+[data-theme] {
+  background-color: var(--ak-bg-surface);
+}
+
 html, body {
-  height: 100%;
+  min-height: 100%;
   background-color: var(--ak-bg-surface);
   color: var(--ak-text);
   line-height: 1.65;
+}
+
+html {
+  height: 100%;
 }
 
 /* ── Scrollbars ── */
