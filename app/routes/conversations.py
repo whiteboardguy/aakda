@@ -16,6 +16,7 @@ from ..utils.deps import require_auth
 from ..utils.print_utils import printStat
 from ..utils.sandbox.sandbox import fetch_graph
 from ..utils.templating import templates
+from ..limiter import limiter
 
 router = APIRouter(prefix="/conversations")
 router.include_router(conv_opts.router)
@@ -186,11 +187,13 @@ async def continue_conversation(
 
     conversation = db.scalars(
         select(models.Conversation).where(
-            (models.Conversation.uid == conv_id) & (models.Conversation.user_uid == uid)
+            (models.Conversation.uid == conv_id)
+            & (models.Conversation.user_uid == uid)
+            & not_(models.Conversation.deleted)
         )
     ).first()
 
-    if not conversation or conversation.deleted:
+    if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     if not conversation.user_messages:
@@ -269,7 +272,13 @@ async def poll_message(
             },
         )
 
-    # Check if the bot message has been persisted.
+    # If the job is still running the status key is present — skip the DB entirely.
+    current_status = task_status.get_status(conv_uid, message_index)
+    if f"{conv_uid}:{message_index}" in task_status._status:
+        return HTMLResponse(current_status)
+
+    # Status key has been cleared by _run_job — the write is complete (or job died).
+    # Hit the DB to fetch the finished message.
     conversation = db.scalars(
         select(models.Conversation).where(
             (models.Conversation.uid == conv_id)
@@ -312,8 +321,7 @@ async def poll_message(
             },
         )
 
-    # Still in progress — return just the updated status text.
-    current_status = task_status.get_status(conv_uid, message_index)
+    # Bot message not found even after job completion — return last known status.
     return HTMLResponse(current_status)
 
 
@@ -343,11 +351,13 @@ async def fetch_conversation(
 
     conversation = db.scalars(
         select(models.Conversation).where(
-            (models.Conversation.uid == conv_id) & (models.Conversation.user_uid == uid)
+            (models.Conversation.uid == conv_id)
+            & (models.Conversation.user_uid == uid)
+            & not_(models.Conversation.deleted)
         )
     ).first()
 
-    if not conversation or conversation.deleted:
+    if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     return templates.TemplateResponse(
@@ -364,6 +374,7 @@ async def fetch_conversation(
 # GET /conversations/s/{conv_share_id}  — publicly shared conversation page
 # ---------------------------------------------------------------------------
 @router.get("/s/{conv_share_id}")
+@limiter.limit("30/minute")
 async def fetch_shared_conversation(
     conv_share_id: str,
     request: Request,

@@ -16,11 +16,13 @@ from ..utils import schemas, models
 from ..utils.database import get_db
 from ..utils.utils import hash, verifyPwd
 from ..utils.sessions import make_session_token, revoke_user_session
+from ..limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/users/signup")
+@limiter.limit("10/minute")
 async def create_user(
     request: Request,
     user_input: Annotated[schemas.User_Create_Request, Form()],
@@ -65,6 +67,7 @@ async def create_user(
 
 
 @router.post("/users/login")
+@limiter.limit("10/minute")
 async def login_user(
     request: Request,
     input: Annotated[schemas.User_Login_Request, Form()],
