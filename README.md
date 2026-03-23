@@ -49,7 +49,7 @@ Copy `.env.example` to `.env` and fill in the required values. Key variables:
 |---|---|---|
 | `LLM_BASE_URL` | Yes | **OpenAI-compatible** API base URL |
 | `LLM_API_KEY` | Yes | API key for the LLM provider |
-| `LLM_MODEL` | Yes | Model ID (e.g. `moonshot-ai/kimi-k2.5`) |
+| `LLM_MODEL` | Yes | Model ID (e.g. `closed-ai/worldcoing-soc-3.9`) |
 | `JINA_API_KEY` | Yes | Jina AI API key (used for web tool) |
 | `DATABASE_*` | Yes | PostgreSQL connection details |
 | `SECURITY_SESSION_SECRET` | Yes | Secret for session signing. Put some random string or use `openssl rand -hex 64` |
